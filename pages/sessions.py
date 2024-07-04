@@ -87,7 +87,7 @@ def graph_teams_boxplot(session):
 def load_graphs(session):
     cols = st.columns(2)
     if session.session_info["Type"] == "Race": cols[0].plotly_chart(graph_drivers_posistion(session))
-    else: cols[0].plotly_chart(graph_drivers_qualifying)
+    else: cols[0].plotly_chart(graph_drivers_qualifying(session))
 
     cols[1].plotly_chart(graph_teams_boxplot(session))
 
@@ -98,10 +98,16 @@ def main():
         year = st.selectbox("Year", range(datetime.date.today().year, 2018 - 1, -1))
         data = fastf1.events.get_event_schedule(year).query("EventFormat != 'testing'")
         data.set_index("EventName", inplace=True)
-        data = data[data["EventDate"] < np.datetime64("today") - 4] # too much time formats
+        data = data[data["Session5DateUtc"] < datetime.datetime.utcnow() - datetime.timedelta(hours=4)]
         location = st.selectbox("Event", data.index[::-1])
         data = data.loc[location]
-        session = st.selectbox("Session", [data.get_session_name(i) for i in range(5, 0, -1)])
+        session = []
+        for i in range(5, 0, -1):
+            try: session.append(data.get_session_name(i)) # in case there is no practice 2, 3
+            except ValueError as e:
+                if "does not exist for this event" in e.__str__(): continue
+                raise e
+        session = st.selectbox("Session", session) # [data.get_session_name(i) for i in range(5, 0, -1)]
 
     if st.sidebar.button("Load", use_container_width=True):
         placeholder = st.sidebar.empty()

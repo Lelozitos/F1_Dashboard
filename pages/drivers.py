@@ -19,7 +19,73 @@ def calculate_max_points(year, round):
 
     return (sprint_events*POINTS_FOR_SPRINT) + (conventional_events*POINTS_FOR_CONVENTIONAL)
 
-def load_graphs(standings, year, round):
+def load_data(year, location):
+    ergast = fastf1.ergast.Ergast()
+    races = ergast.get_race_schedule(year)
+    races = races.loc[:races.index[races["raceName"] == location][0]]
+    results = []
+    for rnd, race in races["raceName"].items():
+        temp = ergast.get_race_results(season=year, round=rnd + 1)
+        temp = temp.content[0]
+
+        sprint = ergast.get_sprint_results(season=year, round=rnd + 1)
+        if sprint.content and sprint.description['round'][0] == rnd + 1:
+            temp = pd.merge(temp, sprint.content[0], on='driverCode', how='left')
+            # Add sprint points and race points to get the total
+            temp['points'] = temp['points_x'] + temp['points_y']
+            temp.drop(columns=['points_x', 'points_y'], inplace=True)
+
+        # Add round no. and grand prix name
+        temp['round'] = rnd + 1
+        temp['race'] = race.removesuffix(' Grand Prix')
+        temp = temp[['round', 'race', 'driverCode', 'points']]  # Keep useful cols.
+        results.append(temp)
+
+    results = pd.concat(results)
+    races = results['race'].drop_duplicates()
+
+    results = results.pivot(index='driverCode', columns='round', values='points')
+
+    # Rank the drivers by their total points
+    results['total_points'] = results.sum(axis=1)
+    results = results.sort_values(by='total_points', ascending=False)
+    results.drop(columns='total_points', inplace=True)
+
+    # Use race name, instead of round no., as column names
+    results.columns = races
+    return results
+
+def load_graphs(results, year, location):
+    fig = px.imshow(
+    results,
+    text_auto=True,
+    aspect='auto',  # Automatically adjust the aspect ratio
+    color_continuous_scale=[[0,    'rgb(198, 219, 239)'],  # Blue scale
+                            [0.25, 'rgb(107, 174, 214)'],
+                            [0.5,  'rgb(33,  113, 181)'],
+                            [0.75, 'rgb(8,   81,  156)'],
+                            [1,    'rgb(8,   48,  107)']],
+    labels={'x': 'Race',
+            'y': 'Driver',
+            'color': 'Points'}       # Change hover texts
+    )
+    fig.update_xaxes(title_text='')      # Remove axis titles
+    fig.update_yaxes(title_text='')
+    fig.update_yaxes(tickmode='linear')  # Show all ticks, i.e. driver names
+    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey',
+                    showline=False,
+                    tickson='boundaries')              # Show horizontal grid only
+    fig.update_xaxes(showgrid=False, showline=False)    # And remove vertical grid
+    fig.update_layout(plot_bgcolor='rgba(0,0,0,0)')     # White background
+    fig.update_layout(coloraxis_showscale=False)        # Remove legend
+    fig.update_layout(xaxis=dict(side='top'))           # x-axis on top
+    fig.update_layout(margin=dict(l=0, r=0, b=0, t=0))  # Remove border margins
+
+    print(results)
+
+    st.plotly_chart(fig)
+
+def load_standings(standings, year, round):
     MAX_POINTS = calculate_max_points(year, round)
     LEADER_POINTS = int(standings.iloc[0]["points"])
 
@@ -50,18 +116,20 @@ def main():
         year = st.selectbox("Year", range(datetime.date.today().year, 2018-1, -1))
         data = fastf1.events.get_event_schedule(year).query("EventFormat != 'testing'")
         data.set_index("EventName", inplace=True)
-        data = data[data["EventDate"] < np.datetime64("today") - 4] # too much time formats
+        data = data[data["Session5DateUtc"] < datetime.datetime.utcnow() - datetime.timedelta(hours=4)]
         location = st.selectbox("Event", data.index[::-1])
 
         with st.spinner("Loading..."):
             standings = ergast.get_driver_standings(season=year, round=data.loc[location]["RoundNumber"]).content[0]
+            # results = load_data(year, location)
         st.success("Success!")
 
     st.header(f"{year} Drivers Championship | {location}", divider="rainbow")
-    tabs = st.tabs(["👨‍👨‍👧‍👦 :orange[Standings]", ":orange[📈 Graph]"]) # not error
+    tabs = st.tabs(["👨‍👨‍👧‍👦 :orange[Standings]", ":orange[📈 Graph]"])
     with tabs[0]:
-        load_graphs(standings, year, data.loc[location]["RoundNumber"])
+        load_standings(standings, year, data.loc[location]["RoundNumber"])
     with tabs[1]:
-        st.write("aaaaaaaaaaaaaa")
+        st.write("aaaaaaaaa")
+        # load_graphs(results, year, location)
 
 main()

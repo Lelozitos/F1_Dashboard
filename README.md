@@ -56,7 +56,7 @@ A silly F1 Dashboard that I made while watching [Drive to Survive](https://www.n
 
 ### Built With
 
-- [![Python][Python-img]][Python.com]
+- [![Streamlit][Streamlit-img]][Streamlit.com]
 - [![FastF1][FastF1-img]][FastF1.com]
 <!-- - [![OpenF1][OpenF1-img]][OpenF1.com] -->
 
@@ -79,7 +79,7 @@ A silly F1 Dashboard that I made while watching [Drive to Survive](https://www.n
    - Open `InstallRequirements.bat` or
    - Install with pip
      ```sh
-     python -m pip install requirements.txt
+     python -m pip install -r requirements.txt
      ```
 
 1. Running the app
@@ -130,14 +130,14 @@ See the [open issues](https://github.com/Lelozitos/F1_Dashboard/issues) for a fu
 
 Leandro Fabre - [LinkedIn](https://www.linkedin.com/in/leandrofabre/)
 
-Project Link: [https://github.com/Lelozitos/F1_Dashboard](https://github.com/Lelozitos/F1_Dashboard)
+Project Link - [https://github.com/Lelozitos/F1_Dashboard](https://github.com/Lelozitos/F1_Dashboard)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- MARKDOWN LINKS & IMAGES -->
 
-[Python-img]: https://img.shields.io/badge/Python-35495E?style=for-the-badge&logo=python&logoColor=4FC08D
-[Python.com]: https://www.python.org
+[Streamlit-img]: https://img.shields.io/badge/Streamlit-35495E?style=for-the-badge&logo=streamlit&logoColor=4FC08D
+[Streamlit.com]: https://streamlit.io
 [FastF1-img]: https://img.shields.io/badge/FastF1-4A4A55?style=for-the-badge&logo=F1&logoColor=FF3E00
 [FastF1.com]: https://docs.fastf1.dev
 [OpenF1-img]: https://img.shields.io/badge/OpenF1-DD0031?style=for-the-badge&logo=f1&logoColor=white

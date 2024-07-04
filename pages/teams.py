@@ -24,7 +24,7 @@ def main():
         year = st.selectbox("Year", range(datetime.date.today().year, 2018-1, -1))
         data = fastf1.events.get_event_schedule(year).query("EventFormat != 'testing'")
         data.set_index("EventName", inplace=True)
-        data = data[data["EventDate"] < np.datetime64("today") - 4] # too much time formats
+        data = data[data["Session5DateUtc"] < datetime.datetime.utcnow() - datetime.timedelta(hours=4)]
         location = st.selectbox("Event", data.index[::-1])
 
         with st.spinner("Loading..."):
