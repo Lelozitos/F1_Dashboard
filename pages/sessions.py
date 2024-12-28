@@ -16,10 +16,44 @@ def load_session(year, location, session):
     data.load(laps=True, telemetry=True, weather=False, messages=False, livedata=None)
     return data
 
-def graph_drivers_qualifying(session):
+def graph_fastest_laps(session):
+    fastest_laps = []
+    for driver in session.drivers:
+        fastest_laps.append(session.laps.pick_driver(driver).pick_fastest())
+
+    fastest_laps = fastf1.core.Laps(fastest_laps).sort_values(by="LapTime").reset_index(drop=True)
+
+    pole_lap = fastest_laps.pick_fastest()
+    fastest_laps['LapTimeDelta'] = fastest_laps['LapTime'] - pole_lap['LapTime']
+    fastest_laps['LapTimeDelta'] = fastest_laps['LapTimeDelta'].dt.total_seconds()
+
+    team_colors = []
+    for index, lap in fastest_laps.iterlaps():
+        color = fastf1.plotting.team_color(lap["Team"])
+        team_colors.append(color)
+
+    fig = px.bar(
+        fastest_laps,
+        x="LapTimeDelta",
+        y="Driver",
+        color="Driver", # TODO color by team instead, to add to legend
+        color_discrete_sequence=team_colors,
+        category_orders={"Driver": fastest_laps["Driver"]},
+        hover_data=["LapTime", "Team", "LapNumber"],
+        text_auto=True,    # TODO formmat this text, awful readability
+        orientation="h"
+    )
+
+    fig.update_layout(
+        title={"text": "Fastest Laps", "font": {"size": 30, "family":"Arial"}, "automargin": True, "xanchor": "center", "x": .5, "yanchor": "top", "y": .9},
+        xaxis = {"title": "Lap Time Delta (s)", "color": "#F1F1F3"},
+        yaxis = {"title": "Driver", "color": "#F1F1F3"},
+        showlegend=False
+    )
+
     return fig
 
-def graph_drivers_posistion(session): # TODO Starting position not tracked. Add qualifying 
+def graph_drivers_posistion(session): # TODO Starting position not tracked. Add qualifying position
     colors = []
     laps = session.laps.set_index("DriverNumber")
     laps = laps.loc[session.drivers] # not needed?
@@ -40,7 +74,7 @@ def graph_drivers_posistion(session): # TODO Starting position not tracked. Add 
         )
 
     fig.update_layout(
-        title={"text": "Posistion throughout the Race", "font": {"size": 30, "family":"Arial", "color": "#F1F1F3"}, "automargin": True, "xanchor": "center", "x": .5, "yanchor": "top", "y": 1},
+        title={"text": "Posistion throughout the Race", "font": {"size": 30, "family":"Arial", "color": "#F1F1F3"}, "automargin": True, "xanchor": "center", "x": .5, "yanchor": "top", "y": .9},
         width = 1000,
         height = 500,
         xaxis = {"title": "Lap №", "showgrid": False, "zeroline": False, "color": "#F1F1F3"},
@@ -74,24 +108,66 @@ def graph_teams_boxplot(session):
     transformed_laps = transformed_laps.set_index("Team")
     transformed_laps = transformed_laps.loc[team_order]
 
-    fig = px.box(transformed_laps, x=transformed_laps.index, y="LapTime (s)", color=transformed_laps.index, color_discrete_sequence=colors)
+    fig = px.box(
+        transformed_laps,
+        x=transformed_laps.index,
+        y="LapTime (s)",
+        color=transformed_laps.index,
+        color_discrete_sequence=colors
+        )
 
     fig.update_layout(
-        title={"text": "Lap Time Distribution by Team", "font": {"size": 30, "family":"Arial"}, "automargin": True, "xanchor": "center", "x": .5, "yanchor": "top", "y": 1},
+        title={"text": "Lap Time Distribution by Team", "font": {"size": 30, "family":"Arial"}, "automargin": True, "xanchor": "center", "x": .5, "yanchor": "top", "y": .9},
         xaxis = {"title": "Teams", "color": "#F1F1F3"},
         yaxis = {"title": "Lap Time (s)", "color": "#F1F1F3"},
         legend = {"title": "Team", "font": {"color": "#F1F1F3"}},
     )
     return fig
+
+def graph_drivers_boxplot(session):
+    laps = session.laps.pick_quicklaps() # Remove pit lanes
+    transformed_laps = laps.copy()
+    transformed_laps["LapTime (s)"] = transformed_laps["LapTime"].dt.total_seconds()
+
+    driver_order = (transformed_laps[["Driver", "LapTime (s)"]].groupby("Driver").median()["LapTime (s)"].sort_values().index)
     
-def graph_drivers_stints(session):
+    colors = []
+    for driver in driver_order:
+        try: colors.append(fastf1.plotting.driver_color(driver))
+        except: colors.append("gray")
+
+    transformed_laps = transformed_laps.set_index("Driver")
+    transformed_laps = transformed_laps.loc[driver_order]
+
+    fig = px.box(
+        transformed_laps,
+        x=transformed_laps.index,
+        y="LapTime (s)",
+        hover_data=["LapNumber", "Compound"],
+        color=transformed_laps.index,
+        color_discrete_sequence=colors
+        )
+
+    fig.update_layout(
+        title={"text": "Lap Time Distribution by Driver", "font": {"size": 30, "family":"Arial"}, "automargin": True, "xanchor": "center", "x": .5, "yanchor": "top", "y": .9},
+        xaxis = {"title": "Drivers", "color": "#F1F1F3"},
+        yaxis = {"title": "Lap Time (s)", "color": "#F1F1F3"},
+        legend = {"title": "Driver", "font": {"color": "#F1F1F3"}},
+    )
+    
+    return fig
+    
+def graph_drivers_stints(session): # TODO LapNumber in this case is the duration of stint, not the lap it was placed
     drivers = [session.get_driver(driver)["Abbreviation"] for driver in session.drivers]
 
     stints = session.laps[["Driver", "Stint", "Compound", "FreshTyre", "LapNumber"]]
+
     stints = stints.groupby(["Driver", "Stint", "Compound", "FreshTyre"])
     stints = stints.count().reset_index()
-    stints.sort_values("Driver", inplace=True) # TODO sort drivers by final position
-    print(stints)
+
+    stints = stints.set_index("Driver")
+    stints = stints.loc[drivers[::-1]]
+    stints.reset_index(inplace=True)
 
     fig = px.bar(
         stints,
@@ -101,17 +177,18 @@ def graph_drivers_stints(session):
         color_discrete_map=fastf1.plotting.COMPOUND_COLORS,
         hover_data=["Stint", "Compound"],
         orientation="h",
-        pattern_shape="FreshTyre"
+        # pattern_shape="FreshTyre", # TODO messes up the order
+        text_auto=True # TODO formmat this text, awful readability
     )
 
     fig.update_layout(
-        title={"text": "Tyre Strategies", "font": {"size": 30, "family":"Arial"}, "automargin": True, "xanchor": "center", "x": .5, "yanchor": "top", "y": 1},
+        title={"text": "Tyre Strategies", "font": {"size": 30, "family":"Arial"}, "automargin": True, "xanchor": "center", "x": .5, "yanchor": "top", "y": .9},
         xaxis = {"title": "Lap Number", "color": "#F1F1F3"},
         showlegend=False
     )
 
     fig.update_traces(
-        marker = {"line": {"color": "#000000", "width": 1}}
+        marker = {"line": {"color": "#000000", "width": 1}},
     )
 
     return fig
@@ -119,12 +196,12 @@ def graph_drivers_stints(session):
 def load_graphs(session):
     cols = st.columns(2)
     if session.session_info["Type"] == "Race": cols[0].plotly_chart(graph_drivers_posistion(session))
-    else: cols[0].plotly_chart(graph_drivers_qualifying(session))
-
-    cols[1].plotly_chart(graph_teams_boxplot(session))
+    else: cols[0].plotly_chart(graph_fastest_laps(session))
+    cols[1].plotly_chart(graph_drivers_boxplot(session))
 
     cols = st.columns(2)
     cols[0].plotly_chart(graph_drivers_stints(session))
+    # cols[1].plotly_chart(graph_fastest_laps(session))
 
 def main():
     nav_bar()
