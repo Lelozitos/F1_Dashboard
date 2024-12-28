@@ -1,4 +1,4 @@
-# streamlit run ./home.py
+# python -m streamlit run ./home.py
 
 import streamlit as st
 
