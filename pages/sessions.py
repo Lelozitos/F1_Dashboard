@@ -148,6 +148,8 @@ def graph_drivers_boxplot(session):
         color_discrete_sequence=colors
         )
 
+    fig.add_hline(y=transformed_laps["LapTime (s)"].mean(), line_dash="dot", line_color="gray", annotation_text="Average", annotation_position="bottom right")
+
     fig.update_layout(
         title={"text": "Lap Time Distribution by Driver", "font": {"size": 30, "family":"Arial"}, "automargin": True, "xanchor": "center", "x": .5, "yanchor": "top", "y": .9},
         xaxis = {"title": "Drivers", "color": "#F1F1F3"},
@@ -232,6 +234,46 @@ def graph_drivers_line(session):
 
     return fig
 
+def graph_drivers_top_speed(session): # TODO add 5 or 10 top speeds
+    top_speeds = []
+       
+    for driver in session.drivers:
+        telemetry = session.laps.pick_drivers([driver]).get_telemetry() # TODO optimize this
+        telemetry["Driver"] = session.get_driver(driver)["Abbreviation"]
+        top_speeds.append(telemetry.iloc[telemetry["Speed"].idxmax()])
+
+    top_speeds = pd.DataFrame(top_speeds)
+    top_speeds["DRS"] = top_speeds["DRS"] > 9 # not certain about drs number
+    top_speeds = top_speeds.sort_values(by="Speed", ascending=False).reset_index(drop=True)
+
+    colors = []
+    for driver in top_speeds["Driver"]:
+        try: colors.append(fastf1.plotting.driver_color(driver))
+        except: colors.append("gray")
+
+    fig = px.bar(
+        top_speeds,
+        x="Driver",
+        y="Speed",
+        color="Driver",
+        color_discrete_sequence=colors,
+        hover_data=["Speed"], # TODO add "LapNumber", "Compound", "Stint"
+        pattern_shape="DRS",
+        # text_auto=True,
+        log_y=True, # TODO better to use log scale or change range?
+        )
+
+    fig.add_hline(y=top_speeds["Speed"].mean(), line_dash="dot", line_color="gray", annotation_text="Average", annotation_position="bottom right")
+
+    fig.update_layout(
+        title={"text": "Top Speed", "font": {"size": 30, "family":"Arial"}, "automargin": True, "xanchor": "center", "x": .5, "yanchor": "top", "y": .9},
+        xaxis = {"title": "Speed (km/h)", "color": "#F1F1F3"},
+        yaxis = {"title": "Driver", "color": "#F1F1F3"},
+        # yaxis_range = [top_speeds["Speed"].min() - 10, top_speeds["Speed"].max() + 10],
+    )
+
+    return fig
+
 def load_graphs(session):
     cols = st.columns(2)
     if session.session_info["Type"] == "Race": cols[0].plotly_chart(graph_drivers_posistion(session))
@@ -241,6 +283,9 @@ def load_graphs(session):
     cols = st.columns(2)
     cols[0].plotly_chart(graph_drivers_stints(session))
     cols[1].plotly_chart(graph_drivers_line(session))
+
+    cols = st.columns(2)
+    cols[0].plotly_chart(graph_drivers_top_speed(session))
 
 def main():
     nav_bar()
