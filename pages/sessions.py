@@ -234,6 +234,32 @@ def graph_drivers_line(session):
 
     return fig
 
+def graph_overall_tyre(session):
+    laps = session.laps.pick_quicklaps()
+    laps = laps[["TyreLife", "Compound", "LapTime"]]
+    laps = laps.groupby(["TyreLife", "Compound"])
+    laps = laps.mean().reset_index()
+
+    laps["LapTime"] = laps["LapTime"].dt.total_seconds()
+
+    fig = px.line(
+        laps,
+        x="TyreLife",
+        y="LapTime",
+        color="Compound",
+        color_discrete_map=fastf1.plotting.COMPOUND_COLORS,
+        hover_data=["LapTime"],
+        markers=True
+    )
+
+    fig.update_layout(
+        title={"text": "Overall Tyre Degradation", "font": {"size": 30, "family":"Arial"}, "automargin": True, "xanchor": "center", "x": .5, "yanchor": "top", "y": .9},
+        xaxis = {"title": "Tyre Life", "color": "#F1F1F3"},
+        yaxis = {"title": "Lap Time (s)", "color": "#F1F1F3"},
+    )
+
+    return fig
+
 def graph_drivers_top_speed(session): # TODO add 5 or 10 top speeds
     top_speeds = []
        
@@ -285,7 +311,8 @@ def load_graphs(session):
     cols[1].plotly_chart(graph_drivers_line(session))
 
     cols = st.columns(2)
-    cols[0].plotly_chart(graph_drivers_top_speed(session))
+    # cols[0].plotly_chart(graph_overall_tyre(session))
+    cols[1].plotly_chart(graph_drivers_top_speed(session))
 
 def main():
     nav_bar()
@@ -320,3 +347,9 @@ def main():
         st.header("<--- Select date from sidebar")
 
 main()
+
+"""
+TODO
+Qualifying deleted laps to analyze
+
+"""
