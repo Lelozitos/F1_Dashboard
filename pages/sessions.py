@@ -154,13 +154,13 @@ def graph_drivers_boxplot(session):
         yaxis = {"title": "Lap Time (s)", "color": "#F1F1F3"},
         legend = {"title": "Driver", "font": {"color": "#F1F1F3"}},
     )
-    
+
     return fig
     
-def graph_drivers_stints(session): # TODO LapNumber in this case is the duration of stint, not the lap it was placed
+def graph_drivers_stints(session): # TODO LapNumber in this case is the duration of stint, not the lap it was placed # TODO fix Tyrelife as well
     drivers = [session.get_driver(driver)["Abbreviation"] for driver in session.drivers]
 
-    stints = session.laps[["Driver", "Stint", "Compound", "FreshTyre", "LapNumber"]]
+    stints = session.laps[["Driver", "Stint", "Compound", "FreshTyre", "LapNumber", "TyreLife"]]
 
     stints = stints.groupby(["Driver", "Stint", "Compound", "FreshTyre"])
     stints = stints.count().reset_index()
@@ -175,16 +175,55 @@ def graph_drivers_stints(session): # TODO LapNumber in this case is the duration
         y="Driver",
         color="Compound",
         color_discrete_map=fastf1.plotting.COMPOUND_COLORS,
-        hover_data=["Stint", "Compound"],
+        hover_data=["Stint", "Compound", "TyreLife"],
         orientation="h",
-        # pattern_shape="FreshTyre", # TODO messes up the order
+        pattern_shape="FreshTyre", # TODO messes up the drivers order
         text_auto=True # TODO formmat this text, awful readability
     )
 
     fig.update_layout(
         title={"text": "Tyre Strategies", "font": {"size": 30, "family":"Arial"}, "automargin": True, "xanchor": "center", "x": .5, "yanchor": "top", "y": .9},
-        xaxis = {"title": "Lap Number", "color": "#F1F1F3"},
-        showlegend=False
+        xaxis = {"title": "Lap №", "color": "#F1F1F3"},
+        yaxis = {"title": "Driver", "color": "#F1F1F3"},
+        showlegend=False # TODO wish legend was with TEAMS or drivers, not compounds
+    )
+
+    fig.update_traces(
+        marker = {"line": {"color": "#000000", "width": 1}},
+    )
+
+    return fig
+
+def graph_drivers_line(session):
+    laps = session.laps.pick_quicklaps() # Remove pit lanes -> this causes graph to start later, due to too much inconsistency in the beginning
+    transformed_laps = laps.copy()
+    transformed_laps["LapTime (s)"] = transformed_laps["LapTime"].dt.total_seconds()
+
+    driver_order = (transformed_laps[["Driver", "LapTime (s)"]].groupby("Driver").median()["LapTime (s)"].sort_values().index)
+    
+    colors = []
+    for driver in driver_order:
+        try: colors.append(fastf1.plotting.driver_color(driver))
+        except: colors.append("gray")
+
+    transformed_laps = transformed_laps.set_index("Driver")
+    transformed_laps = transformed_laps.loc[driver_order]
+    transformed_laps["Compound"] = transformed_laps["Compound"].apply(str.capitalize)
+
+    fig = px.line(
+        transformed_laps,
+        x="LapNumber",
+        y="LapTime (s)",
+        hover_data=["Team", "LapNumber", "Compound", "Stint"],
+        color=transformed_laps.index,
+        color_discrete_sequence=colors,
+        markers=True
+    )
+
+    fig.update_layout(
+        title={"text": "Drivers' Consistency", "font": {"size": 30, "family":"Arial"}, "automargin": True, "xanchor": "center", "x": .5, "yanchor": "top", "y": .9},
+        xaxis = {"title": "Lap №", "color": "#F1F1F3"},
+        yaxis = {"title": "Lap Time (s)", "color": "#F1F1F3"},
     )
 
     fig.update_traces(
@@ -201,7 +240,7 @@ def load_graphs(session):
 
     cols = st.columns(2)
     cols[0].plotly_chart(graph_drivers_stints(session))
-    # cols[1].plotly_chart(graph_fastest_laps(session))
+    cols[1].plotly_chart(graph_drivers_line(session))
 
 def main():
     nav_bar()
