@@ -180,7 +180,7 @@ def graph_drivers_stints(session): # TODO LapNumber in this case is the duration
         hover_data=["Stint", "Compound", "TyreLife"],
         orientation="h",
         pattern_shape="FreshTyre", # TODO messes up the drivers order
-        text_auto=True # TODO formmat this text, awful readability
+        text_auto=True
     )
 
     fig.update_layout(
@@ -191,7 +191,8 @@ def graph_drivers_stints(session): # TODO LapNumber in this case is the duration
     )
 
     fig.update_traces(
-        marker = {"line": {"color": "#000000", "width": 1}},
+        marker={"line": {"color": "black", "width": 1}},
+        textfont={"family": "Arial", "size": 12, "color": "#F1F1F3", "shadow": "1px 1px 2px black"},
     )
 
     return fig
@@ -216,7 +217,7 @@ def graph_drivers_line(session):
         transformed_laps,
         x="LapNumber",
         y="LapTime (s)",
-        hover_data=["Team", "LapNumber", "Compound", "Stint"],
+        hover_data=["Team", "LapNumber", "Compound", "Stint", "TyreLife"],
         color=transformed_laps.index,
         color_discrete_sequence=colors,
         markers=True
@@ -229,7 +230,8 @@ def graph_drivers_line(session):
     )
 
     fig.update_traces(
-        marker = {"line": {"color": "#000000", "width": 1}},
+        marker={"line": {"color": "black", "width": 1}},
+        textfont={"family": "Arial", "size": 12, "color": "#F1F1F3", "shadow": "1px 1px 2px black"},
     )
 
     return fig
@@ -284,8 +286,8 @@ def graph_drivers_top_speed(session): # TODO add 5 or 10 top speeds
         color="Driver",
         color_discrete_sequence=colors,
         hover_data=["Speed"], # TODO add "LapNumber", "Compound", "Stint"
-        pattern_shape="DRS",
-        # text_auto=True,
+        pattern_shape="DRS", # TODO remove DRS from legend
+        text_auto=True,
         log_y=True, # TODO better to use log scale or change range?
         )
 
@@ -298,21 +300,12 @@ def graph_drivers_top_speed(session): # TODO add 5 or 10 top speeds
         # yaxis_range = [top_speeds["Speed"].min() - 10, top_speeds["Speed"].max() + 10],
     )
 
+    fig.update_traces(
+        marker={"line": {"color": "black", "width": 1}},
+        textfont={"family": "Arial", "size": 12, "color": "#F1F1F3", "shadow": "1px 1px 2px black"},
+    )
+
     return fig
-
-def load_graphs(session):
-    cols = st.columns(2)
-    if session.session_info["Type"] == "Race": cols[0].plotly_chart(graph_drivers_posistion(session))
-    else: cols[0].plotly_chart(graph_fastest_laps(session))
-    cols[1].plotly_chart(graph_drivers_boxplot(session))
-
-    cols = st.columns(2)
-    cols[0].plotly_chart(graph_drivers_stints(session))
-    cols[1].plotly_chart(graph_drivers_line(session))
-
-    cols = st.columns(2)
-    # cols[0].plotly_chart(graph_overall_tyre(session))
-    cols[1].plotly_chart(graph_drivers_top_speed(session))
 
 def main():
     nav_bar()
@@ -347,9 +340,3 @@ def main():
         st.header("<--- Select date from sidebar")
 
 main()
-
-"""
-TODO
-Qualifying deleted laps to analyze
-
-"""
