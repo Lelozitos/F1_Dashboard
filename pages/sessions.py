@@ -16,6 +16,35 @@ def load_session(year, location, session):
     data.load(laps=True, telemetry=True, weather=True, messages=False, livedata=None)
     return data
 
+def graph_results(session): # TODO add fastest lap and improve UI
+    results = session.results
+    results = results.sort_values(by="Position")
+    results = results.reset_index(drop=True)
+
+    colors = []
+    for driver in results["Abbreviation"].unique():
+        try: colors.append(fastf1.plotting.driver_color(driver))
+        except: colors.append("gray")
+
+    # TODO HeadshotURL awful quality
+    cols = st.columns(3)
+    for i in range(3):
+        driver = results.iloc[i]
+        with cols[i].container(border=True):
+            st.markdown(f"{driver['Position']} | {driver['FullName']} - {int(driver['Points'])} | {driver['TeamName']}")
+            st.image(driver['HeadshotUrl'], use_container_width=True, caption=driver['BroadcastName'])
+
+    with st.expander("more..."):
+        for i in range(3, len(results.index), 4):
+            cols = st.columns(4)
+            for j in range(4):
+                try:
+                    driver = results.iloc[i+j]
+                    with cols[j].container(border=True):
+                        st.markdown(f"{driver['Position']} | {driver['FullName']} - {int(driver['Points'])} | {driver['TeamName']}")
+                        st.image(driver['HeadshotUrl'], use_container_width=True, caption=driver['BroadcastName'])
+                except: continue
+
 def graph_fastest_laps(session):
     fastest_laps = []
     for driver in session.drivers:
@@ -366,6 +395,8 @@ def graph_drivers_start(session):
     # ^^^ kinda worried that distance is related with starting position, cuz every pole starts accelerating way sooner than the rest
     # ^^^ can be because the pole has the least speed going into a corner, so it can accelerate sooner
 
+    # https://aws.amazon.com/sports/f1/start-analysis/
+
     telemetries = []
     first_lap = session.laps.pick_laps([1])
     for driver in session.drivers:
@@ -411,6 +442,8 @@ def graph_drivers_start(session):
     return fig
 
 def load_graphs(session):
+    graph_results(session)
+
     cols = st.columns(2)
     if session.session_info["Type"] == "Race": cols[0].plotly_chart(graph_drivers_posistion(session))
     else: cols[0].plotly_chart(graph_fastest_laps(session))
