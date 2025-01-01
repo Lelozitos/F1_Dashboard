@@ -109,14 +109,28 @@ Once the website is open, you can navigate through diffent tabs in the navigatio
 
 ## 🚀 Roadmap
 
+- [ ] Add demo
 - [ ] Finish Home
 - [ ] Finish Contact
-- [ ] Improve Teams
 - [ ] Add more Graphs
   - [ ] Session
+    - [ ] Qualifying deleted laps to analyze
+    - [ ] Overtake graph, with close distances to ahead
   - [ ] Teams
   - [ ] Drivers
-- [ ] Add demo
+    - [ ] Add nationality flags
+- [ ] Improve UI
+  - [ ] Sessions with a podium like UI
+  - [ ] More obvious starting grid
+  - [ ] Format Time in graphs
+- [ ] Videos
+  - [ ] Embed video of highlights by F1 YT (https://www.youtube.com/@Formula1)
+  - [ ] Add a way to see a video simultaneously (break and acceleration in curves)
+- [ ] Bug Fixes
+  - [ x ] Albon in São Paulo 2024 giving error (maybe he didn't start?)
+  - [ ] Fix old drivers colors
+  - [ ] Fix new year without races
+  - [ ] Sometimes graphs titles don't show up (couldn't reproduce it)
 
 See the [open issues](https://github.com/Lelozitos/F1_Dashboard/issues) for a full list of proposed features (and known issues).
 

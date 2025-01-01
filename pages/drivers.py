@@ -94,7 +94,7 @@ def load_standings(standings, year, round):
         driver = standings.iloc[i]
         with cols[i].container(border=True):
             st.markdown(f"{driver['position']} | {driver['givenName']} {driver['familyName']} - {int(driver['points'])} {'Yes' if driver['points'] + MAX_POINTS >= LEADER_POINTS else 'No'} | {driver['constructorNames'][0]}")
-            st.image(f"https://media.formula1.com/d_driver_fallback_image.png/content/dam/fom-website/drivers/{driver['givenName'][:1]}/{driver['givenName'][:3].upper()}{driver['familyName'][:3].upper()}01_{driver['givenName']}_{driver['familyName']}/{driver['givenName'][:3].lower()}{driver['familyName'][:3].lower()}01.png") # "https://media.formula1.com/image/upload/f_auto,c_limit,q_75,w_1320/content/dam/fom-website/drivers/{year}Drivers/{driver['familyName'].lower()}"
+            st.markdown(f"[![{driver['driverCode']}](https://media.formula1.com/d_driver_fallback_image.png/content/dam/fom-website/drivers/{driver['givenName'][:1]}/{driver['givenName'][:3].upper()}{driver['familyName'][:3].upper()}01_{driver['givenName']}_{driver['familyName']}/{driver['givenName'][:3].lower()}{driver['familyName'][:3].lower()}01.png)]({driver['driverUrl']})") # "https://media.formula1.com/image/upload/f_auto,c_limit,q_75,w_1320/content/dam/fom-website/drivers/{year}Drivers/{driver['familyName'].lower()}"
 
     for i in range(3, len(standings.index), 4):
         cols = st.columns(4)
@@ -103,7 +103,8 @@ def load_standings(standings, year, round):
                 driver = standings.iloc[i+j]
                 with cols[j].container(border=True):
                     st.markdown(f"{driver['position']} | {driver['givenName']} {driver['familyName']} - {int(driver['points'])} {'Yes' if driver['points'] + MAX_POINTS >= LEADER_POINTS else 'No'} | {driver['constructorNames'][0]}")
-                    st.image(f"https://media.formula1.com/d_driver_fallback_image.png/content/dam/fom-website/drivers/{driver['givenName'][:1]}/{driver['givenName'][:3].upper()}{driver['familyName'][:3].upper()}01_{driver['givenName']}_{driver['familyName']}/{driver['givenName'][:3].lower()}{driver['familyName'][:3].lower()}01.png") # "https://media.formula1.com/image/upload/f_auto,c_limit,q_75,w_1320/content/dam/fom-website/drivers/{year}Drivers/{driver['familyName'].lower()}"
+                    st.markdown(f"[![{driver['driverCode']}](https://media.formula1.com/d_driver_fallback_image.png/content/dam/fom-website/drivers/{driver['givenName'][:1]}/{driver['givenName'][:3].upper()}{driver['familyName'][:3].upper()}01_{driver['givenName']}_{driver['familyName']}/{driver['givenName'][:3].lower()}{driver['familyName'][:3].lower()}01.png)]({driver['driverUrl']})") # "https://media.formula1.com/image/upload/f_auto,c_limit,q_75,w_1320/content/dam/fom-website/drivers/{year}Drivers/{driver['familyName'].lower()}"
+
             except: continue
 
     st.dataframe(standings)
@@ -124,7 +125,7 @@ def main():
             # results = load_data(year, location)
         st.success("Success!")
 
-    st.header(f"{year} Drivers Championship | {location}", divider="rainbow")
+    st.header(f"{year} Drivers Championship | {location}")
     tabs = st.tabs(["👨‍👨‍👧‍👦 :orange[Standings]", ":orange[📈 Graph]"])
     with tabs[0]:
         load_standings(standings, year, data.loc[location]["RoundNumber"])
