@@ -13,7 +13,7 @@ fastf1.Cache.set_disabled() # aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 def load_session(year, location, session):
     print(year, location, session)
     data = fastf1.get_session(year, location, session)
-    data.load(laps=True, telemetry=True, weather=False, messages=False, livedata=None)
+    data.load(laps=True, telemetry=True, weather=True, messages=False, livedata=None)
     return data
 
 def graph_fastest_laps(session):
@@ -53,15 +53,13 @@ def graph_fastest_laps(session):
 
     return fig
 
-def graph_drivers_posistion(session): # TODO Starting position not tracked. Add qualifying position
+def graph_drivers_posistion(session): # TODO Starting position not tracked. Add qualifying position # TODO sometimes legend is not in order 
     colors = []
     laps = session.laps.set_index("DriverNumber")
-    laps = laps.loc[session.drivers] # not needed?
+    laps = laps.loc[laps.index.intersection(session.drivers)] # Filter out drivers not in laps
     for driver in laps["Driver"].unique():
         try: colors.append(fastf1.plotting.driver_color(driver))
         except: colors.append("gray")
-
-    laps["Compound"] = laps["Compound"].apply(str.capitalize)
 
     fig = px.line(
         laps,
@@ -70,7 +68,7 @@ def graph_drivers_posistion(session): # TODO Starting position not tracked. Add 
         color = "Driver",
         color_discrete_sequence = colors,
         markers = True,
-        hover_data = ["Team", "Compound", "Stint"] # ["Driver", "Position", "LapNumber"]
+        hover_data = ["Team", "Compound", "Stint"] # TODO add starting position
         )
 
     fig.update_layout(
@@ -168,7 +166,7 @@ def graph_drivers_stints(session): # TODO LapNumber in this case is the duration
     stints = stints.count().reset_index()
 
     stints = stints.set_index("Driver")
-    stints = stints.loc[drivers[::-1]]
+    stints = stints.loc[stints.index.intersection(drivers[::-1])]
     stints.reset_index(inplace=True)
 
     fig = px.bar(
@@ -197,7 +195,7 @@ def graph_drivers_stints(session): # TODO LapNumber in this case is the duration
 
     return fig
 
-def graph_drivers_line(session):
+def graph_drivers_consistency(session): # TODO add safety car periods and yellow flags
     laps = session.laps.pick_quicklaps() # Remove pit lanes -> this causes graph to start later, due to too much inconsistency in the beginning
     transformed_laps = laps.copy()
     transformed_laps["LapTime (s)"] = transformed_laps["LapTime"].dt.total_seconds()
@@ -231,7 +229,7 @@ def graph_drivers_line(session):
 
     fig.update_traces(
         marker={"line": {"color": "black", "width": 1}},
-        textfont={"family": "Arial", "size": 12, "color": "#F1F1F3", "shadow": "1px 1px 2px black"},
+        textfont={"family": "Arial", "size": 12, "color": "#F1F1F3", "shadow": "1px 1px 2px black"}, # TODO austrian 2024 race gives error
     )
 
     return fig
@@ -266,9 +264,11 @@ def graph_drivers_top_speed(session): # TODO add 5 or 10 top speeds
     top_speeds = []
        
     for driver in session.drivers:
-        telemetry = session.laps.pick_drivers([driver]).get_telemetry() # TODO optimize this
-        telemetry["Driver"] = session.get_driver(driver)["Abbreviation"]
-        top_speeds.append(telemetry.iloc[telemetry["Speed"].idxmax()])
+        try: # If driver has no laps, it will give an error
+            telemetry = session.laps.pick_drivers([driver]).get_telemetry() # TODO optimize this
+            telemetry["Driver"] = session.get_driver(driver)["Abbreviation"]
+            top_speeds.append(telemetry.iloc[telemetry["Speed"].idxmax()])
+        except: pass
 
     top_speeds = pd.DataFrame(top_speeds)
     top_speeds["DRS"] = top_speeds["DRS"] > 9 # not certain about drs number
@@ -287,17 +287,17 @@ def graph_drivers_top_speed(session): # TODO add 5 or 10 top speeds
         color_discrete_sequence=colors,
         hover_data=["Speed"], # TODO add "LapNumber", "Compound", "Stint"
         pattern_shape="DRS", # TODO remove DRS from legend
+        pattern_shape_map={True: "/", False: ""},
         text_auto=True,
-        log_y=True, # TODO better to use log scale or change range?
         )
 
-    fig.add_hline(y=top_speeds["Speed"].mean(), line_dash="dot", line_color="gray", annotation_text="Average", annotation_position="bottom right")
+    fig.add_hline(y=top_speeds["Speed"].mean(), line_dash="dot", line_color="gray", annotation_text="Average", annotation_position="bottom right") # TODO remove outliers, if a driver has no top speed, messes up the average
 
     fig.update_layout(
         title={"text": "Top Speed", "font": {"size": 30, "family":"Arial"}, "automargin": True, "xanchor": "center", "x": .5, "yanchor": "top", "y": .9},
-        xaxis = {"title": "Speed (km/h)", "color": "#F1F1F3"},
-        yaxis = {"title": "Driver", "color": "#F1F1F3"},
-        # yaxis_range = [top_speeds["Speed"].min() - 10, top_speeds["Speed"].max() + 10],
+        xaxis = {"title": "Driver", "color": "#F1F1F3"},
+        yaxis = {"title": "Speed (km/h)", "color": "#F1F1F3"},
+        yaxis_range = [top_speeds["Speed"].min() - 10, top_speeds["Speed"].max() + 10],
     )
 
     fig.update_traces(
@@ -306,6 +306,51 @@ def graph_drivers_top_speed(session): # TODO add 5 or 10 top speeds
     )
 
     return fig
+
+def graph_teams_pitstop(session):
+    pitstops = session.laps.pick_box_laps()
+    pitstops = pitstops[["Driver", "Team", "PitInTime", "PitOutTime"]] # Driver to make it easier to calculate ?
+
+    # Problem to calculate time in pits, since there is entering without exit (DNF) and multiple pitstops in a single lap
+    st.dataframe(pitstops)
+
+    pitstops = pitstops.groupby("Team")
+    pitstops = pitstops.mean().reset_index()
+    pitstops = pitstops.sort_values(by="PitStop", ascending=False)
+
+    fig = px.bar(
+        pitstops,
+        x="Team",
+        y="PitStop",
+        color="Team",
+        color_discrete_sequence=fastf1.plotting.TEAM_COLORS,
+        text_auto=True
+    )
+
+    fig.update_layout(
+        title={"text": "Pit Stops", "font": {"size": 30, "family":"Arial"}, "automargin": True, "xanchor": "center", "x": .5, "yanchor": "top", "y": .9},
+        xaxis = {"title": "Driver", "color": "#F1F1F3"},
+        yaxis = {"title": "Pit Stops", "color": "#F1F1F3"},
+    )
+
+    return fig
+
+def load_graphs(session):
+    cols = st.columns(2)
+    if session.session_info["Type"] == "Race": cols[0].plotly_chart(graph_drivers_posistion(session))
+    else: cols[0].plotly_chart(graph_fastest_laps(session))
+    cols[1].plotly_chart(graph_drivers_boxplot(session))
+
+    cols = st.columns(2)
+    cols[0].plotly_chart(graph_drivers_stints(session))
+    cols[1].plotly_chart(graph_drivers_consistency(session))
+
+    cols = st.columns(2)
+    cols[0].plotly_chart(graph_overall_tyre(session))
+    cols[1].plotly_chart(graph_drivers_top_speed(session))
+
+    cols = st.columns(2)
+    # cols[0].plotly_chart(graph_teams_pitstop(session))
 
 def main():
     nav_bar()
