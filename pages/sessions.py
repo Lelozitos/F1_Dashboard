@@ -361,6 +361,55 @@ def graph_weather(session):
 
     return fig
 
+def graph_drivers_start(session):
+    # TODO every driver has the same starting distance, maybe api bug?
+    # ^^^ kinda worried that distance is related with starting position, cuz every pole starts accelerating way sooner than the rest
+    # ^^^ can be because the pole has the least speed going into a corner, so it can accelerate sooner
+
+    telemetries = []
+    first_lap = session.laps.pick_laps([1])
+    for driver in session.drivers:
+        try: # If driver has no laps, it will give an error
+            telemetry = first_lap.pick_drivers([driver]).get_telemetry().add_distance()
+            telemetry["Driver"] = session.get_driver(driver)["Abbreviation"]
+            telemetries.append(telemetry)
+        except: pass
+    
+    # Remove telemetry after the first curve
+    for telemetry in telemetries:
+        try: # If driver has no laps, it will give an error
+            first_curve_index = telemetry[telemetry['Distance'] > session.get_circuit_info().corners.iloc[0]["Distance"]].index[0]
+            telemetry.drop(telemetry.index[first_curve_index:], inplace=True)
+        except: pass
+
+    telemetries = pd.concat(telemetries)
+    telemetries = telemetries.sort_values(by="Distance", ascending=False).reset_index(drop=True)
+
+    colors = []
+    for driver in telemetries["Driver"].unique():
+        try: colors.append(fastf1.plotting.driver_color(driver))
+        except: colors.append("gray")
+    
+    # TODO have no idea how to plot this, I wanted to show the throttle, break, speed and distance.
+    fig = px.line(
+        telemetries,
+        x="Distance",
+        y="Throttle",
+        color="Driver",
+        color_discrete_sequence=colors,
+        hover_data=["Speed", "Brake"],
+        markers=True
+    )
+
+    fig.update_layout(
+        title={"text": "Start of the Race", "font": {"size": 30, "family": "Arial"}, "automargin": True, "xanchor": "center", "x": 0.5, "yanchor": "top", "y": 0.9},
+        xaxis_title="Distance (m)",
+        yaxis_title="Throttle %",
+        # legend_title="Temperature",
+    )
+
+    return fig
+
 def load_graphs(session):
     cols = st.columns(2)
     if session.session_info["Type"] == "Race": cols[0].plotly_chart(graph_drivers_posistion(session))
@@ -378,6 +427,9 @@ def load_graphs(session):
     cols = st.columns(2)
     # cols[0].plotly_chart(graph_teams_pitstop(session))
     cols[1].plotly_chart(graph_weather(session))
+
+    cols = st.columns(2)
+    cols[0].plotly_chart(graph_drivers_start(session))
 
 def main():
     nav_bar()
