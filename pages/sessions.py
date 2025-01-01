@@ -335,6 +335,32 @@ def graph_teams_pitstop(session):
 
     return fig
 
+def graph_weather(session):
+    weather_data = session.weather_data
+
+    raining = False
+    if weather_data["Rainfall"].sum() > len(weather_data.index) * .3:
+        raining = True
+
+    fig = px.line(
+        weather_data,
+        x="Time",
+        y=["AirTemp", "TrackTemp"],
+        labels={"value": "Temperature (°C)", "variable": "Temperature"},
+        title="Weather Data Analysis",
+        color_discrete_map={"AirTemp": "blue", "TrackTemp": "red"},
+        markers=True,
+    )
+
+    fig.update_layout(
+        xaxis_title="Time",
+        yaxis_title="Temperature (°C)",
+        legend_title="Temperature",
+        title={"text": f"Weather Data Analysis | {'Raining' if raining else 'Clear'}", "font": {"size": 30, "family": "Arial"}, "automargin": True, "xanchor": "center", "x": 0.5, "yanchor": "top", "y": 0.9},
+    )
+
+    return fig
+
 def load_graphs(session):
     cols = st.columns(2)
     if session.session_info["Type"] == "Race": cols[0].plotly_chart(graph_drivers_posistion(session))
@@ -351,6 +377,7 @@ def load_graphs(session):
 
     cols = st.columns(2)
     # cols[0].plotly_chart(graph_teams_pitstop(session))
+    cols[1].plotly_chart(graph_weather(session))
 
 def main():
     nav_bar()
