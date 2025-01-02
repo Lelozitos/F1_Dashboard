@@ -33,7 +33,7 @@ def main():
             standings = ergast.get_constructor_standings(season=year, round=data.loc[location]["RoundNumber"]).content[0]
         st.success("Success!")
 
-    st.header(f"{year} Constructors Championship | {location}")
+    st.title(f"{year} Constructors Championship | {location}")
     tabs = st.tabs(["👨‍👨‍👧‍👦 :orange[Standings]", ":orange[📈 Graph]"])
     with tabs[0]:
         load_graphs(standings)

@@ -125,7 +125,7 @@ def main():
             # results = load_data(year, location)
         st.success("Success!")
 
-    st.header(f"{year} Drivers Championship | {location}")
+    st.title(f"{year} Drivers Championship | {location}")
     tabs = st.tabs(["👨‍👨‍👧‍👦 :orange[Standings]", ":orange[📈 Graph]"])
     with tabs[0]:
         load_standings(standings, year, data.loc[location]["RoundNumber"])

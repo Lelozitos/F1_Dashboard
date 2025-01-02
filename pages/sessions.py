@@ -16,7 +16,7 @@ def load_session(year, location, session):
     data.load(laps=True, telemetry=True, weather=True, messages=False, livedata=None)
     return data
 
-def graph_results(session): # TODO add fastest lap and improve UI
+def graph_results(session): # TODO add lap times and delta
     results = session.results
     results = results.sort_values(by="Position")
     results = results.reset_index(drop=True)
@@ -31,8 +31,8 @@ def graph_results(session): # TODO add fastest lap and improve UI
     for i in range(3):
         driver = results.iloc[i]
         with cols[i].container(border=True):
-            st.markdown(f"{driver['Position']} | {driver['FullName']} - {int(driver['Points'])} | {driver['TeamName']}")
-            st.image(driver['HeadshotUrl'], use_container_width=True, caption=driver['BroadcastName'])
+            st.markdown(f"{int(driver['Position'])} | {driver['FullName']} - {int(driver['Points'])} | {driver['TeamName']}")
+            st.image(driver['HeadshotUrl'], use_container_width=True)
 
     with st.expander("more..."):
         for i in range(3, len(results.index), 4):
@@ -41,8 +41,8 @@ def graph_results(session): # TODO add fastest lap and improve UI
                 try:
                     driver = results.iloc[i+j]
                     with cols[j].container(border=True):
-                        st.markdown(f"{driver['Position']} | {driver['FullName']} - {int(driver['Points'])} | {driver['TeamName']}")
-                        st.image(driver['HeadshotUrl'], use_container_width=True, caption=driver['BroadcastName'])
+                        st.markdown(f"{int(driver['Position'])} | {driver['FullName']} - {int(driver['Points'])} | {driver['TeamName']}")
+                        st.image(driver['HeadshotUrl'], use_container_width=True)
                 except: continue
 
 def graph_fastest_laps(session):
@@ -442,7 +442,7 @@ def graph_drivers_start(session):
     return fig
 
 def load_graphs(session):
-    graph_results(session)
+    if session.session_info["Type"] != "Practice": graph_results(session)
 
     cols = st.columns(2)
     if session.session_info["Type"] == "Race": cols[0].plotly_chart(graph_drivers_posistion(session))
@@ -490,7 +490,7 @@ def main():
             data = load_session(year, location, session)
         st.sidebar.success("Success!")
 
-        st.header(f"{year} - {location} | {session}")
+        st.title(f"{year} - {location} | {session}")
         load_graphs(data)
 
     else:
