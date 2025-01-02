@@ -27,6 +27,8 @@ def graph_results(session): # TODO add lap times and delta
         except: colors.append("gray")
 
     # TODO HeadshotURL awful quality
+    # TODO Qualifying position does not have points
+    # TODO old photos does not work
     cols = st.columns(3)
     for i in range(3):
         driver = results.iloc[i]

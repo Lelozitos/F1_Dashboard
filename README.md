@@ -116,6 +116,7 @@ Once the website is open, you can navigate through diffent tabs in the navigatio
   - [ ] Session
     - [ ] Qualifying deleted laps to analyze
     - [ ] Overtake graph, with close distances to ahead
+    - [ ] Choose the curve and give statistics of it
   - [ ] Teams
   - [ ] Drivers
     - [ ] Add nationality flags
@@ -123,6 +124,7 @@ Once the website is open, you can navigate through diffent tabs in the navigatio
   - [ ] Sessions with a podium like UI
   - [ ] More obvious starting grid
   - [ ] Format Time in graphs
+  - [ ] There is no way of knowing driver's name by abbreviation
 - [ ] Videos
   - [ ] Embed video of highlights by F1 YT (https://www.youtube.com/@Formula1)
   - [ ] Add a way to see a video simultaneously (break and acceleration in curves)
@@ -131,6 +133,7 @@ Once the website is open, you can navigate through diffent tabs in the navigatio
   - [ ] Fix old drivers colors
   - [ ] Fix new year without races
   - [ ] Sometimes graphs titles don't show up (couldn't reproduce it)
+- [ ] Make an API and Database
 
 See the [open issues](https://github.com/Lelozitos/F1_Dashboard/issues) for a full list of proposed features (and known issues).
 

@@ -13,11 +13,11 @@ def nav_bar():
     set_streamlit_page_config_once()
     st.header("F1 CONSULTING", divider="rainbow")
     cols = st.columns(5)
-    cols[0].page_link("home.py", label="Home", icon="🏡")
-    cols[1].page_link("pages/sessions.py", label="Sessions", icon="🏎")
-    cols[2].page_link("pages/teams.py", label="Teams", icon="👨‍👨‍👧‍👦")
-    cols[3].page_link("pages/drivers.py", label="Drivers", icon="🙍‍♂️")
-    cols[4].page_link("pages/contact.py", label="Contact", icon="📞")
+    cols[0].page_link("home.py", label="**Home**", icon="🏡")
+    cols[1].page_link("pages/sessions.py", label="**Sessions**", icon="🏎")
+    cols[2].page_link("pages/teams.py", label="**Teams**", icon="👨‍👨‍👧‍👦")
+    cols[3].page_link("pages/drivers.py", label="**Drivers**", icon="🙍‍♂️")
+    cols[4].page_link("pages/contact.py", label="**Contact**", icon="📞")
 
 def main():
     nav_bar()
