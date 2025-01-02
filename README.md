@@ -131,9 +131,10 @@ Once the website is open, you can navigate through diffent tabs in the navigatio
 - [ ] Bug Fixes
   - [ x ] Albon in São Paulo 2024 giving error (maybe he didn't start?)
   - [ ] Fix old drivers colors
-  - [ ] Fix new year without races
+  - [ x ] Fix new year without races
   - [ ] Sometimes graphs titles don't show up (couldn't reproduce it)
 - [ ] Make an API and Database
+- [ ] Hate the fact that it recalculates most of telemetries and colors for every graph
 
 See the [open issues](https://github.com/Lelozitos/F1_Dashboard/issues) for a full list of proposed features (and known issues).
 

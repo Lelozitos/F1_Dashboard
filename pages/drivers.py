@@ -121,7 +121,10 @@ def main():
         location = st.selectbox("Event", data.index[::-1])
 
         with st.spinner("Loading..."):
-            standings = ergast.get_driver_standings(season=year, round=data.loc[location]["RoundNumber"]).content[0]
+            try: standings = ergast.get_driver_standings(season=year, round=data.loc[location]["RoundNumber"]).content[0]
+            except:
+                st.error("Failed to load data.")
+                return
             # results = load_data(year, location)
         st.success("Success!")
 

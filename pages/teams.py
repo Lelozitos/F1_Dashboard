@@ -30,7 +30,10 @@ def main():
         location = st.selectbox("Event", data.index[::-1])
 
         with st.spinner("Loading..."):
-            standings = ergast.get_constructor_standings(season=year, round=data.loc[location]["RoundNumber"]).content[0]
+            try: standings = ergast.get_constructor_standings(season=year, round=data.loc[location]["RoundNumber"]).content[0]
+            except:
+                st.error("Failed to load data.")
+                return
         st.success("Success!")
 
     st.title(f"{year} Constructors Championship | {location}")

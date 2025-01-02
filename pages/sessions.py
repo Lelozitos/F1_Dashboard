@@ -463,11 +463,11 @@ def load_graphs(session):
     cols[0].plotly_chart(graph_drivers_stints(session))
     cols[1].plotly_chart(graph_overall_tyre(session))
 
-    cols = st.columns(2)
+    cols = st.columns(2) # TODO maybe join these two graphs and make another for car style
     cols[0].plotly_chart(graph_drivers_top_speed(session))
-    # cols[1].plotly_chart(graph_car_style(session))
+    cols[1].plotly_chart(graph_car_style(session))
 
-    cols = st.columns(2)
+    cols = st.columns(2) # TODO remove this for qualifying and practice
     cols[0].plotly_chart(graph_drivers_start(session))
     # cols[1].plotly_chart(graph_teams_pitstop(session))
     
@@ -483,7 +483,10 @@ def main():
         data.set_index("EventName", inplace=True)
         data = data[data["Session5DateUtc"] < (pd.Timestamp.utcnow() - pd.Timedelta("4h")).to_datetime64()]
         location = st.selectbox("Event", data.index[::-1])
-        data = data.loc[location]
+        try: data = data.loc[location]
+        except:
+            st.error("Failed to load data.")
+            return
         session = []
         for i in range(5, 0, -1):
             try: session.append(data.get_session_name(i)) # in case there is no practice 2, 3
