@@ -9,31 +9,39 @@ import datetime
 import fastf1.plotting
 fastf1.Cache.set_disabled() # aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 
-# @st.cache_data
+@st.cache_data(persist=True)
 def load_session(year, location, session):
     print(year, location, session)
     data = fastf1.get_session(year, location, session)
     data.load(laps=True, telemetry=True, weather=True, messages=False, livedata=None)
     return data
 
-def graph_results(session): # TODO add lap times and delta
+def graph_results(session):
     results = session.results
     results = results.sort_values(by="Position")
     results = results.reset_index(drop=True)
 
-    colors = []
-    for driver in results["Abbreviation"].unique():
-        try: colors.append(fastf1.plotting.driver_color(driver))
-        except: colors.append("gray")
+    if session.session_info["Type"] == "Race":
+        results["Display"] = results["Time"].dt.total_seconds()
+        results["Display"] = results["Display"].fillna(results["Status"].str.replace("+", ""))
+    elif session.session_info["Type"] == "Qualifying":
+        results["Display"] = results["Q3"].dt.total_seconds()
+        results["Display"] = results["Display"].fillna(results["Q2"].dt.total_seconds())
+        results["Display"] = results["Display"].fillna(results["Q1"].dt.total_seconds())
+        results["Display"] = results["Display"].fillna(results["Status"].str.replace("+", ""))
+    # There is no session results for practice by this API
+
+    # TODO format time race is entire race, qualifying is just one lap
+    # results["Display"] = results["Display"].apply(lambda x: f"{int(x // 60)}.{x % 60:.3f}" if isinstance(x, (int, float)) else x)
 
     # TODO HeadshotURL awful quality
-    # TODO Qualifying position does not have points
     # TODO old photos does not work
     cols = st.columns(3)
     for i in range(3):
         driver = results.iloc[i]
         with cols[i].container(border=True):
-            st.markdown(f"{int(driver['Position'])} | {driver['FullName']} - {int(driver['Points'])} | {driver['TeamName']}")
+            if session.session_info["Type"] == "Race": st.markdown(f"{int(driver['Position'])} | {driver['FullName']} - {int(driver['Points'])} | {driver['TeamName']} | +{driver['Display']}")
+            else: st.markdown(f"{int(driver['Position'])} | {driver['FullName']} | {driver['TeamName']} | +{driver['Display']}")
             st.image(driver['HeadshotUrl'], use_container_width=True)
 
     with st.expander("more..."):
@@ -43,7 +51,8 @@ def graph_results(session): # TODO add lap times and delta
                 try:
                     driver = results.iloc[i+j]
                     with cols[j].container(border=True):
-                        st.markdown(f"{int(driver['Position'])} | {driver['FullName']} - {int(driver['Points'])} | {driver['TeamName']}")
+                        if session.session_info["Type"] == "Race": st.markdown(f"{int(driver['Position'])} | {driver['FullName']} - {int(driver['Points'])} | {driver['TeamName']} | +{driver['Display']}")
+                        else: st.markdown(f"{int(driver['Position'])} | {driver['FullName']} | {driver['TeamName']} | +{driver['Display']}")
                         st.image(driver['HeadshotUrl'], use_container_width=True)
                 except: continue
 
@@ -104,7 +113,7 @@ def graph_fastest_laps(session):
         color_discrete_sequence=team_colors,
         category_orders={"Driver": fastest_laps["Driver"]},
         hover_data=["LapTime", "Team", "LapNumber"],
-        text_auto=True,    # TODO formmat this text, awful readability
+        text_auto=True,
         orientation="h"
     )
 
@@ -113,6 +122,11 @@ def graph_fastest_laps(session):
         xaxis = {"title": "Lap Time Delta (s)", "color": "#F1F1F3"},
         yaxis = {"title": "Driver", "color": "#F1F1F3"},
         showlegend=False
+    )
+    
+    fig.update_traces(
+        marker={"line": {"color": "black", "width": 1}},
+        textfont={"family": "Arial", "size": 12, "color": "#F1F1F3", "shadow": "1px 1px 2px black"},
     )
 
     return fig
@@ -151,7 +165,7 @@ def graph_drivers_consistency(session): # TODO add safety car periods and yellow
 
     fig.update_traces(
         marker={"line": {"color": "black", "width": 1}},
-        textfont={"family": "Arial", "size": 12, "color": "#F1F1F3", "shadow": "1px 1px 2px black"}, # TODO austrian 2024 race gives error
+        textfont={"family": "Arial", "size": 12, "color": "#F1F1F3"}, # Shadow gives an error here for some reason
     )
 
     return fig
@@ -339,13 +353,50 @@ def graph_drivers_top_speed(session): # TODO add 5 or 10 top speeds
     return fig
 
 def graph_car_style(session):
-    # scatter plot with top speed and mean speed
-    pass
+    # Scatter plot with top speed and mean speed
+    # TODO better to do by team, since it is the car style
+    speeds = []
+    # teams = [session.get_driver(driver)["Team"] for driver in session.drivers]
+       
+    for driver in session.drivers:
+        try: # If driver has no laps, it will give an error
+            telemetry = session.laps.pick_drivers([driver]).get_telemetry() # TODO optimize this
+            telemetry["Driver"] = session.get_driver(driver)["Abbreviation"]
+            telemetry["MeanSpeed"] = telemetry["Speed"].mean() # TODO this counts pit lanes, should be only on track
+            telemetry.rename(columns={"Speed": "TopSpeed"}, inplace=True)
+            speeds.append(telemetry.iloc[telemetry["TopSpeed"].idxmax()])
+        except: pass
+
+    speeds = pd.DataFrame(speeds)
+    speeds["DRS"] = speeds["DRS"] > 9 # not certain about drs number
+
+    colors = []
+    for driver in speeds["Driver"]:
+        try: colors.append(fastf1.plotting.driver_color(driver))
+        except: colors.append("gray")
+
+    fig = px.scatter(
+        speeds,
+        x="MeanSpeed",
+        y="TopSpeed",
+        color="Driver",
+        color_discrete_sequence=colors,
+        hover_data=["DRS"],
+        )
+
+    fig.update_layout(
+        title={"text": "Car Style", "font": {"size": 30, "family":"Arial"}, "automargin": True, "xanchor": "center", "x": .5, "yanchor": "top", "y": .9},
+        xaxis = {"title": "Mean Speed (km/h)", "color": "#F1F1F3"},
+        yaxis = {"title": "Top Speed (km/h)", "color": "#F1F1F3"},
+    )
+
+    return fig
 
 def graph_drivers_start(session):
     # TODO every driver has the same starting distance, maybe api bug?
     # ^^^ kinda worried that distance is related with starting position, cuz every pole starts accelerating way sooner than the rest
     # ^^^ can be because the pole has the least speed going into a corner, so it can accelerate sooner
+    # Almost certain distance is 0 for every driver start, that means that the first curve is later in distance for the last than pole
 
     # https://aws.amazon.com/sports/f1/start-analysis/
 
@@ -372,8 +423,12 @@ def graph_drivers_start(session):
     for driver in telemetries["Driver"].unique():
         try: colors.append(fastf1.plotting.driver_color(driver))
         except: colors.append("gray")
+
+    # Calculate 0-200 times
+    # telemetries["0-200 Time"] = telemetries.groupby("Driver")["Speed"].apply(lambda x: (x >= 200).idxmax() - (x >= 0).idxmax())
     
     # TODO have no idea how to plot this, I wanted to show the throttle, break, speed and distance.
+    # Probably best with time instead of distance
     fig = px.line(
         telemetries,
         x="Distance",
@@ -467,9 +522,10 @@ def load_graphs(session):
     cols[0].plotly_chart(graph_drivers_top_speed(session))
     cols[1].plotly_chart(graph_car_style(session))
 
-    cols = st.columns(2) # TODO remove this for qualifying and practice
-    cols[0].plotly_chart(graph_drivers_start(session))
-    # cols[1].plotly_chart(graph_teams_pitstop(session))
+    if session.session_info["Type"] == "Race":
+        cols = st.columns(2)
+        cols[0].plotly_chart(graph_drivers_start(session))
+        # cols[1].plotly_chart(graph_teams_pitstop(session))
     
     cols = st.columns(2)
     cols[0].plotly_chart(graph_weather(session))
@@ -478,7 +534,7 @@ def main():
     nav_bar()
 
     with st.sidebar:
-        year = st.selectbox("Year", range(datetime.date.today().year, 2018 - 1, -1))
+        year = st.selectbox("Year", range(datetime.date.today().year, 2018 - 1, -1)) # Data only goes back to 2018
         data = fastf1.events.get_event_schedule(year).query("EventFormat != 'testing'")
         data.set_index("EventName", inplace=True)
         data = data[data["Session5DateUtc"] < (pd.Timestamp.utcnow() - pd.Timedelta("4h")).to_datetime64()]
@@ -498,8 +554,8 @@ def main():
     if st.sidebar.button("Load", use_container_width=True):
         placeholder = st.sidebar.empty()
         with placeholder, st.spinner("Loading..."):
-            st.cache_data.clear() # aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-            fastf1.Cache.clear_cache() # deep=True aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+            # st.cache_data.clear() # aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+            # fastf1.Cache.clear_cache() # deep=True aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
             data = load_session(year, location, session)
         st.sidebar.success("Success!")
 
