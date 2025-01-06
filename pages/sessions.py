@@ -8,6 +8,7 @@ import numpy as np
 import datetime
 
 import fastf1.plotting
+import fastf1.api
 
 @st.cache_data(persist=True)
 def load_session(year, location, session):
@@ -70,6 +71,7 @@ def graph_drivers_posistion(session):
     for driver in grid.index:
         grid_names.append(session.get_driver(driver)["Abbreviation"])
     grid["Driver"] = grid_names
+    grid = grid[grid["Position"] != 0] # In case of a pit lane start
     
     laps = pd.concat([laps, grid])
     # laps.fillna(method="ffill", inplace=True) # Wish this worked
@@ -79,8 +81,6 @@ def graph_drivers_posistion(session):
     for driver in laps["Driver"].unique():
         try: colors.append(fastf1.plotting.driver_color(driver))
         except: colors.append("gray")
-
-    st.write(laps)
 
     fig = px.line(
         laps,
@@ -93,7 +93,7 @@ def graph_drivers_posistion(session):
         )
 
     fig.update_layout(
-        title={"text": "Posistion throughout the Race", "font": {"size": 30, "family":"Arial", "color": "#F1F1F3"}, "automargin": True, "xanchor": "center", "x": .5, "yanchor": "top", "y": .9},
+        title={"text": "Posistion throughout the Race", "font": {"size": 30, "family":"Arial"}, "automargin": True, "xanchor": "center", "x": .5, "yanchor": "top", "y": .9},
         width = 1000,
         height = 500,
         xaxis = {"title": "Lap №", "showgrid": False, "zeroline": False, "color": "#F1F1F3"},
@@ -105,7 +105,7 @@ def graph_drivers_posistion(session):
     
     return fig
 
-def graph_fastest_laps(session):
+def graph_drivers_fastest_laps_time(session):
     fastest_laps = []
     for driver in session.drivers:
         fastest_laps.append(session.laps.pick_drivers([driver]).pick_fastest())
@@ -147,7 +147,7 @@ def graph_fastest_laps(session):
     return fig
 
 def graph_drivers_consistency(session): # TODO add safety car periods and yellow flags (Open F1)
-    laps = session.laps.pick_wo_box() # Remove pit lanes -> this causes graph to start later, due to too much inconsistency in the beginning
+    laps = session.laps.pick_quicklaps() # Remove pit lanes -> this causes graph to start later, due to too much inconsistency in the beginning
     transformed_laps = laps.copy()
     transformed_laps["LapTime (s)"] = transformed_laps["LapTime"].dt.total_seconds()
 
@@ -186,7 +186,7 @@ def graph_drivers_consistency(session): # TODO add safety car periods and yellow
     return fig
 
 def graph_teams_boxplot(session):
-    laps = session.laps.pick_wo_box()
+    laps = session.laps.pick_quicklaps()
     transformed_laps = laps.copy()
     transformed_laps["LapTime (s)"] = transformed_laps["LapTime"].dt.total_seconds()
     team_order = (
@@ -222,7 +222,7 @@ def graph_teams_boxplot(session):
     return fig
 
 def graph_drivers_boxplot(session):
-    laps = session.laps.pick_wo_box() # Remove pit lanes
+    laps = session.laps.pick_quicklaps() # Remove pit lanes
     transformed_laps = laps.copy()
     transformed_laps["LapTime (s)"] = transformed_laps["LapTime"].dt.total_seconds()
 
@@ -293,7 +293,7 @@ def graph_drivers_stints(session): # TODO LapNumber in this case is the duration
     return fig
 
 def graph_overall_tyre(session):
-    laps = session.laps.pick_wo_box()
+    laps = session.laps.pick_quicklaps()
     laps = laps[["TyreLife", "Compound", "LapTime"]]
     laps = laps.groupby(["TyreLife", "Compound"])
     laps = laps.mean().reset_index()
@@ -323,7 +323,7 @@ def graph_drivers_top_speed(session): # TODO add 5 or 10 top speeds
        
     for driver in session.drivers:
         try: # If driver has no laps, it will give an error
-            telemetry = session.laps.pick_drivers([driver]).get_telemetry() # TODO optimize this
+            telemetry = session.laps.pick_drivers([driver]).get_car_data()
             telemetry["Driver"] = session.get_driver(driver)["Abbreviation"]
             top_speeds.append(telemetry.iloc[telemetry["Speed"].idxmax()])
         except: pass
@@ -372,7 +372,7 @@ def graph_car_style(session):
        
     for driver in session.drivers:
         try: # If driver has no laps, it will give an error
-            telemetry = session.laps.pick_drivers([driver]).pick_wo_box().get_telemetry() # TODO optimize this # Remove pit lanes for mean speed
+            telemetry = session.laps.pick_drivers([driver]).pick_quicklaps().get_car_data() # Remove pit lanes for mean speed
             telemetry["Driver"] = session.get_driver(driver)["Abbreviation"]
             telemetry["MeanSpeed"] = telemetry["Speed"].mean()
             telemetry.rename(columns={"Speed": "TopSpeed"}, inplace=True)
@@ -416,7 +416,7 @@ def graph_drivers_start(session):
     first_lap = session.laps.pick_laps([1])
     for driver in session.drivers:
         try: # If driver has no laps, it will give an error
-            telemetry = first_lap.pick_drivers([driver]).get_telemetry().add_distance()
+            telemetry = first_lap.pick_drivers([driver]).get_car_data().add_distance()
             telemetry["Driver"] = session.get_driver(driver)["Abbreviation"]
             telemetries.append(telemetry)
         except: pass
@@ -460,41 +460,17 @@ def graph_drivers_start(session):
 
     return fig
 
-def graph_teams_pitstop(session):
-    pitstops = session.laps.pick_box_laps()
-    pitstops = pitstops[["Driver", "Team", "PitInTime", "PitOutTime"]] # Driver to make it easier to calculate ?
-
-    # Problem to calculate time in pits, since there is entering without exit (DNF) and multiple pitstops in a single lap
-    st.dataframe(pitstops)
-
-    pitstops = pitstops.groupby("Team")
-    pitstops = pitstops.mean().reset_index()
-    pitstops = pitstops.sort_values(by="PitStop", ascending=False)
-
-    fig = px.bar(
-        pitstops,
-        x="Team",
-        y="PitStop",
-        color="Team",
-        color_discrete_sequence=fastf1.plotting.TEAM_COLORS,
-        text_auto=True
-    )
-
-    fig.update_layout(
-        title={"text": "Pit Stops", "font": {"size": 30, "family":"Arial"}, "automargin": True, "xanchor": "center", "x": .5, "yanchor": "top", "y": .9},
-        xaxis = {"title": "Driver", "color": "#F1F1F3"},
-        yaxis = {"title": "Pit Stops", "color": "#F1F1F3"},
-    )
-
-    return fig
-
 def graph_drivers_curves(session): # https://plotly.com/python/v3/dropdowns/
     # choose lap and curve to analyze the speed, throttle and brake
     pass
 
 def graph_weather(session):
-    # TODO change time to lap number (lap_count)
     weather_data = session.weather_data
+
+    # Maybe fastf1.api can break someday
+    weather_data = pd.merge_asof(weather_data, pd.DataFrame(fastf1.api.lap_count(session.api_path)), on="Time", direction="backward")
+    weather_data["Time"] = weather_data["Time"].dt.total_seconds()
+    weather_data.drop_duplicates(subset=["CurrentLap"], keep="last", inplace=True)
 
     raining = False
     if weather_data["Rainfall"].sum() > len(weather_data.index) * .3:
@@ -502,7 +478,7 @@ def graph_weather(session):
 
     fig = px.line(
         weather_data,
-        x="Time",
+        x="CurrentLap",
         y=["AirTemp", "TrackTemp"],
         labels={"value": "Temperature (°C)", "variable": "Temperature"},
         title="Weather Data Analysis",
@@ -516,6 +492,42 @@ def graph_weather(session):
         legend_title="Temperature",
         title={"text": f"Weather Data Analysis | {'Raining' if raining else 'Clear'}", "font": {"size": 30, "family": "Arial"}, "automargin": True, "xanchor": "center", "x": 0.5, "yanchor": "top", "y": 0.9},
     )
+    
+    # TODO if it stops raining and starts again, it will fail
+    rains = weather_data[weather_data["Rainfall"] == True]
+
+    if raining:
+        fig.update_layout(
+            shapes=[
+                dict(
+                    type="rect",
+                    xref="x",
+                    yref="paper",
+                    x0=rains.iloc[0]["CurrentLap"],
+                    x1=rains.iloc[-1]["CurrentLap"],
+                    y0=0,
+                    y1=1,
+                    fillcolor="LightBlue",
+                    opacity=0.5,
+                    layer="below",
+                    line_width=0
+                )
+            ],
+            annotations=[
+                dict(
+                    x=(rains.iloc[0]["CurrentLap"] + rains.iloc[-1]["CurrentLap"])/2,
+                    y=1.05, 
+                    xref="x",
+                    yref="paper",
+                    text="Rain Interval",
+                    showarrow=False,
+                    font=dict(size=12, color="blue"),
+                    align="center",
+                    bgcolor="LightBlue",
+                    borderwidth=1
+                )
+            ]
+        )
 
     return fig
 
@@ -524,7 +536,7 @@ def load_graphs(session):
 
     cols = st.columns(2)
     if session.session_info["Type"] == "Race": cols[0].plotly_chart(graph_drivers_posistion(session))
-    else: cols[0].plotly_chart(graph_fastest_laps(session))
+    else: cols[0].plotly_chart(graph_drivers_fastest_laps_time(session))
     cols[1].plotly_chart(graph_drivers_consistency(session))
 
     cols = st.columns(2)
@@ -545,7 +557,6 @@ def load_graphs(session):
         # cols[1].plotly_chart(graph_teams_pitstop(session)) # TODO do it
     
     cols = st.columns(2)
-    # cols[0].plotly_chart(graph_drivers_curves(session)) # TODO maybe change race start for only this curves
     cols[1].plotly_chart(graph_weather(session))
 
 def main():
