@@ -121,10 +121,10 @@ Once the website is open, you can navigate through diffent tabs in the navigatio
   - [ ] Drivers
     - [ ] Add nationality flags
 - [ ] Improve UI
-  - [ ] Sessions with a podium like UI
+  - [ x ] Sessions with a podium like UI
   - [ ] More obvious starting grid
   - [ ] Format Time in graphs
-  - [ ] There is no way of knowing driver's name by abbreviation
+  - [ x ] There is no way of knowing driver's name by abbreviation
 - [ ] Videos
   - [ ] Embed video of highlights by F1 YT (https://www.youtube.com/@Formula1)
   - [ ] Add a way to see a video simultaneously (break and acceleration in curves)
@@ -133,6 +133,10 @@ Once the website is open, you can navigate through diffent tabs in the navigatio
   - [ ] Fix old drivers colors
   - [ x ] Fix new year without races
   - [ ] Sometimes graphs titles don't show up (couldn't reproduce it)
+  - [ ] Made too much requests to API it broke the code (probably not worth fixing it)
+  - [ ] Driver and Compound color deprecated, however new alternative does'nt suit me
+  - [ ] If it starts raining in the middle of the race, quicklaps doesn't work and wo_laps suck (monaco 2023)
+- [ ] Change files of graphs logic
 - [ ] Make an API and Database
 - [ ] Hate the fact that it recalculates most of telemetries and colors for every graph
 

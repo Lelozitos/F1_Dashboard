@@ -1,13 +1,13 @@
 import streamlit as st
 from home import nav_bar
 
-import plotly.express as px # https://dash.plotly.com/minimal-app
+import plotly.express as px
+import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
 import datetime
 
 import fastf1.plotting
-fastf1.Cache.set_disabled() # aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 
 @st.cache_data(persist=True)
 def load_session(year, location, session):
@@ -56,13 +56,31 @@ def graph_results(session):
                         st.image(driver['HeadshotUrl'], use_container_width=True)
                 except: continue
 
-def graph_drivers_posistion(session): # TODO Starting position not tracked. Add qualifying position # TODO sometimes legend is not in order 
+def graph_drivers_posistion(session):
     colors = []
-    laps = session.laps.set_index("DriverNumber")
-    laps = laps.loc[laps.index.intersection(session.drivers)] # Filter out drivers not in laps
+    laps = session.laps.copy().set_index("DriverNumber")[["Driver", "LapNumber", "Stint", "Compound", "Team", "Position", "TrackStatus"]]
+    laps.loc[:,"GridPosition"] = session.results["GridPosition"]
+
+    grid = pd.DataFrame(session.results["GridPosition"])
+    grid.rename(columns={"GridPosition": "Position"}, inplace=True)
+    grid["LapNumber"] = 0
+    
+    # Hate how this is done btw # TODO fix that pls i hate it
+    grid_names = []
+    for driver in grid.index:
+        grid_names.append(session.get_driver(driver)["Abbreviation"])
+    grid["Driver"] = grid_names
+    
+    laps = pd.concat([laps, grid])
+    # laps.fillna(method="ffill", inplace=True) # Wish this worked
+
+    laps.sort_values(["LapNumber"], inplace=True)
+    laps = laps.loc[session.drivers] # Filter out drivers not in laps, might cause an error
     for driver in laps["Driver"].unique():
         try: colors.append(fastf1.plotting.driver_color(driver))
         except: colors.append("gray")
+
+    st.write(laps)
 
     fig = px.line(
         laps,
@@ -71,7 +89,7 @@ def graph_drivers_posistion(session): # TODO Starting position not tracked. Add 
         color = "Driver",
         color_discrete_sequence = colors,
         markers = True,
-        hover_data = ["Team", "Compound", "Stint"] # TODO add starting position
+        hover_data = ["GridPosition", "Team", "Compound", "Stint"], # TODO add starting position
         )
 
     fig.update_layout(
@@ -80,9 +98,7 @@ def graph_drivers_posistion(session): # TODO Starting position not tracked. Add 
         height = 500,
         xaxis = {"title": "Lap №", "showgrid": False, "zeroline": False, "color": "#F1F1F3"},
         yaxis = {"title": "Position", "autorange": "reversed", "showgrid": False, "zeroline": False, "tickvals": [1, 5, 10, 15, 20], "color": "#F1F1F3"},
-        legend = {"title": "Driver", "font": {"color": "#F1F1F3"}}, # "bgcolor": "#1e1c1b"
-        # paper_bgcolor = "#292625",
-        # plot_bgcolor = "#1e1c1b"
+        legend = {"title": "Driver", "font": {"color": "#F1F1F3"}, "traceorder": "normal"},
     )
 
     fig.update_traces(marker={"size": 4, "line": {"width": .2, "color": "DarkSlateGrey"}})
@@ -92,7 +108,7 @@ def graph_drivers_posistion(session): # TODO Starting position not tracked. Add 
 def graph_fastest_laps(session):
     fastest_laps = []
     for driver in session.drivers:
-        fastest_laps.append(session.laps.pick_driver(driver).pick_fastest())
+        fastest_laps.append(session.laps.pick_drivers([driver]).pick_fastest())
 
     fastest_laps = fastf1.core.Laps(fastest_laps).sort_values(by="LapTime").reset_index(drop=True)
 
@@ -101,15 +117,15 @@ def graph_fastest_laps(session):
     fastest_laps['LapTimeDelta'] = fastest_laps['LapTimeDelta'].dt.total_seconds()
 
     team_colors = []
-    for index, lap in fastest_laps.iterlaps():
-        color = fastf1.plotting.team_color(lap["Team"])
+    for team in fastest_laps["Team"].unique():
+        color = fastf1.plotting.team_color(team)
         team_colors.append(color)
 
     fig = px.bar(
         fastest_laps,
         x="LapTimeDelta",
         y="Driver",
-        color="Driver", # TODO color by team instead, to add to legend
+        color="Team",
         color_discrete_sequence=team_colors,
         category_orders={"Driver": fastest_laps["Driver"]},
         hover_data=["LapTime", "Team", "LapNumber"],
@@ -121,7 +137,6 @@ def graph_fastest_laps(session):
         title={"text": "Fastest Laps", "font": {"size": 30, "family":"Arial"}, "automargin": True, "xanchor": "center", "x": .5, "yanchor": "top", "y": .9},
         xaxis = {"title": "Lap Time Delta (s)", "color": "#F1F1F3"},
         yaxis = {"title": "Driver", "color": "#F1F1F3"},
-        showlegend=False
     )
     
     fig.update_traces(
@@ -131,8 +146,8 @@ def graph_fastest_laps(session):
 
     return fig
 
-def graph_drivers_consistency(session): # TODO add safety car periods and yellow flags
-    laps = session.laps.pick_quicklaps() # Remove pit lanes -> this causes graph to start later, due to too much inconsistency in the beginning
+def graph_drivers_consistency(session): # TODO add safety car periods and yellow flags (Open F1)
+    laps = session.laps.pick_wo_box() # Remove pit lanes -> this causes graph to start later, due to too much inconsistency in the beginning
     transformed_laps = laps.copy()
     transformed_laps["LapTime (s)"] = transformed_laps["LapTime"].dt.total_seconds()
 
@@ -171,7 +186,7 @@ def graph_drivers_consistency(session): # TODO add safety car periods and yellow
     return fig
 
 def graph_teams_boxplot(session):
-    laps = session.laps.pick_quicklaps()
+    laps = session.laps.pick_wo_box()
     transformed_laps = laps.copy()
     transformed_laps["LapTime (s)"] = transformed_laps["LapTime"].dt.total_seconds()
     team_order = (
@@ -207,7 +222,7 @@ def graph_teams_boxplot(session):
     return fig
 
 def graph_drivers_boxplot(session):
-    laps = session.laps.pick_quicklaps() # Remove pit lanes
+    laps = session.laps.pick_wo_box() # Remove pit lanes
     transformed_laps = laps.copy()
     transformed_laps["LapTime (s)"] = transformed_laps["LapTime"].dt.total_seconds()
 
@@ -241,17 +256,13 @@ def graph_drivers_boxplot(session):
 
     return fig
     
-def graph_drivers_stints(session): # TODO LapNumber in this case is the duration of stint, not the lap it was placed # TODO fix Tyrelife as well
-    drivers = [session.get_driver(driver)["Abbreviation"] for driver in session.drivers]
+def graph_drivers_stints(session): # TODO LapNumber in this case is the duration of stint, not the lap it was placed # TODO stint order messed up
+    driver_order = [session.get_driver(driver)["Abbreviation"] for driver in session.drivers]
 
-    stints = session.laps[["Driver", "Stint", "Compound", "FreshTyre", "LapNumber", "TyreLife"]]
+    stints = session.laps[["Driver", "Stint", "Compound", "FreshTyre", "LapNumber"]]
 
     stints = stints.groupby(["Driver", "Stint", "Compound", "FreshTyre"])
     stints = stints.count().reset_index()
-
-    stints = stints.set_index("Driver")
-    stints = stints.loc[stints.index.intersection(drivers[::-1])]
-    stints.reset_index(inplace=True)
 
     fig = px.bar(
         stints,
@@ -259,10 +270,12 @@ def graph_drivers_stints(session): # TODO LapNumber in this case is the duration
         y="Driver",
         color="Compound",
         color_discrete_map=fastf1.plotting.COMPOUND_COLORS,
-        hover_data=["Stint", "Compound", "TyreLife"],
+        hover_data=["Stint", "Compound"],
         orientation="h",
-        pattern_shape="FreshTyre", # TODO messes up the drivers order
-        text_auto=True
+        pattern_shape="FreshTyre",
+        pattern_shape_map={True: "", False: "/"},
+        text_auto=True,
+        category_orders={"Driver": driver_order}
     )
 
     fig.update_layout(
@@ -280,7 +293,7 @@ def graph_drivers_stints(session): # TODO LapNumber in this case is the duration
     return fig
 
 def graph_overall_tyre(session):
-    laps = session.laps.pick_quicklaps()
+    laps = session.laps.pick_wo_box()
     laps = laps[["TyreLife", "Compound", "LapTime"]]
     laps = laps.groupby(["TyreLife", "Compound"])
     laps = laps.mean().reset_index()
@@ -356,13 +369,12 @@ def graph_car_style(session):
     # Scatter plot with top speed and mean speed
     # TODO better to do by team, since it is the car style
     speeds = []
-    # teams = [session.get_driver(driver)["Team"] for driver in session.drivers]
        
     for driver in session.drivers:
         try: # If driver has no laps, it will give an error
-            telemetry = session.laps.pick_drivers([driver]).get_telemetry() # TODO optimize this
+            telemetry = session.laps.pick_drivers([driver]).pick_wo_box().get_telemetry() # TODO optimize this # Remove pit lanes for mean speed
             telemetry["Driver"] = session.get_driver(driver)["Abbreviation"]
-            telemetry["MeanSpeed"] = telemetry["Speed"].mean() # TODO this counts pit lanes, should be only on track
+            telemetry["MeanSpeed"] = telemetry["Speed"].mean()
             telemetry.rename(columns={"Speed": "TopSpeed"}, inplace=True)
             speeds.append(telemetry.iloc[telemetry["TopSpeed"].idxmax()])
         except: pass
@@ -476,7 +488,12 @@ def graph_teams_pitstop(session):
 
     return fig
 
+def graph_drivers_curves(session): # https://plotly.com/python/v3/dropdowns/
+    # choose lap and curve to analyze the speed, throttle and brake
+    pass
+
 def graph_weather(session):
+    # TODO change time to lap number (lap_count)
     weather_data = session.weather_data
 
     raining = False
@@ -525,10 +542,11 @@ def load_graphs(session):
     if session.session_info["Type"] == "Race":
         cols = st.columns(2)
         cols[0].plotly_chart(graph_drivers_start(session))
-        # cols[1].plotly_chart(graph_teams_pitstop(session))
+        # cols[1].plotly_chart(graph_teams_pitstop(session)) # TODO do it
     
     cols = st.columns(2)
-    cols[0].plotly_chart(graph_weather(session))
+    # cols[0].plotly_chart(graph_drivers_curves(session)) # TODO maybe change race start for only this curves
+    cols[1].plotly_chart(graph_weather(session))
 
 def main():
     nav_bar()
