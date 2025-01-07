@@ -9,7 +9,7 @@ def main():
     
     cols = st.columns(6, gap="medium")
     cols[2].markdown("[![LinkedIn](https://raw.githubusercontent.com/danielcranney/readme-generator/main/public/icons/socials/linkedin.svg)](https://www.linkedin.com/in/leandrofabre)")
-    cols[3].markdown("[![GitHub](https://raw.githubusercontent.com/danielcranney/readme-generator/main/public/icons/socials/github-dark.svg)](https://github.com/Lelozitos)")
+    cols[3].markdown("[![GitHub](https://raw.githubusercontent.com/danielcranney/readme-generator/main/public/icons/socials/github.svg)](https://github.com/Lelozitos)")
     # cols[3].markdown("[![Email](public/icons/email.png)](mailto:lm.fabre@hotmail.com)")
 
     with st.form("Contact Me"):
