@@ -22,6 +22,7 @@ def main():
 
 
         if st.form_submit_button("Send", icon="📩"):
+            # st.success("Message has been sent!")
             st.error("Failed to send message.") # TODO send message
 
 main()

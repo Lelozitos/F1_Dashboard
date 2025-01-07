@@ -46,7 +46,7 @@
 
 ## ✨ About The Project
 
-<!-- ![Demo](aaaaaaaaaaaaaaaaa) -->
+[![F1 Dashboard v0.8.2](https://img.youtube.com/vi/K-KOvKbXpBs/0.jpg)](https://www.youtube.com/watch?v=K-KOvKbXpBs 'F1 Dashboard v0.8.2')
 
 This program is designed to provide comprehensive and interactive visualizations of Formula 1 data. From telemetry analysis to driver and team performance comparisons, it offers users the ability to explore and understand the intricate details of the sport. Whether you’re tracking lap times, analyzing speed differentials, or studying historical race data, this tool delivers an engaging and intuitive experience. Perfect for fans, analysts, and engineers looking to deepen their understanding of F1 dynamics.
 
@@ -109,7 +109,7 @@ Once the website is open, you can navigate through diffent tabs in the navigatio
 
 ## 🚀 Roadmap
 
-- [ ] Add demo
+- [ x ] Add demo
 - [ x ] Finish Home
 - [ x ] Finish Contact
 - [ ] Add more Graphs
@@ -122,7 +122,7 @@ Once the website is open, you can navigate through diffent tabs in the navigatio
     - [ ] Add nationality flags
 - [ ] Improve UI
   - [ x ] Sessions with a podium like UI
-  - [ ] More obvious starting grid
+  - [ x ] More obvious starting grid
   - [ ] Format Time in graphs
   - [ x ] There is no way of knowing driver's name by abbreviation
 - [ ] Videos
@@ -133,8 +133,7 @@ Once the website is open, you can navigate through diffent tabs in the navigatio
   - [ ] Fix old drivers colors
   - [ x ] Fix new year without races
   - [ ] Sometimes graphs titles don't show up (couldn't reproduce it)
-  - [ ] Made too much requests to API it broke the code (probably not worth fixing it)
-  - [ ] Driver and Compound color deprecated, however new alternative does'nt suit me
+  - [ ] Driver and Compound color deprecated, however new alternative doesn't suit me
   - [ ] If it starts raining in the middle of the race, quicklaps doesn't work and wo_laps suck (monaco 2023)
 - [ ] Add Circuits page
 - [ ] Change files of graphs logic

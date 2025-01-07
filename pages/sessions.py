@@ -357,6 +357,7 @@ def graph_drivers_top_speed(session): # TODO add 5 or 10 top speeds
         xaxis = {"title": "Driver", "color": "#F1F1F3"},
         yaxis = {"title": "Speed (km/h)", "color": "#F1F1F3"},
         yaxis_range = [top_speeds["Speed"].min() - 10, top_speeds["Speed"].max() + 10],
+        showlegend=False    
     )
 
     fig.update_traces(
@@ -456,7 +457,6 @@ def graph_drivers_start(session):
         title={"text": "Start of the Race", "font": {"size": 30, "family": "Arial"}, "automargin": True, "xanchor": "center", "x": 0.5, "yanchor": "top", "y": 0.9},
         xaxis_title="Distance (m)",
         yaxis_title="Throttle %",
-        # legend_title="Temperature",
     )
 
     return fig
@@ -673,7 +673,7 @@ def main():
         st.header("<--- Select date from sidebar")
 
     with st.sidebar:
-        for _ in range(10): st.write("")
+        for _ in range(8): st.write("")
         credits()
 
 main()

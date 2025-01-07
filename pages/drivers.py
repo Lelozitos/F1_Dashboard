@@ -107,8 +107,6 @@ def load_standings(standings, year, round):
 
             except: continue
 
-    st.dataframe(standings)
-
 def main():
     ergast = fastf1.ergast.Ergast()
     nav_bar()

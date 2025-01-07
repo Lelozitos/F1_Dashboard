@@ -25,8 +25,6 @@ def load_standings(standings, year):
                 st.markdown(f"{int(team['position'])} | {team['constructorName']} - {int(team['points'])}")
                 st.markdown(f"![{team['constructorName']}](https://media.formula1.com/content/dam/fom-website/teams/{year}/{team['constructorName']}.png) ![{team['constructorName']}](https://media.formula1.com/content/dam/fom-website/teams/{year}/{team['constructorName']}-logo.png)")
 
-    st.dataframe(standings)
-
 def load_graphs(standings):
     pass
 
