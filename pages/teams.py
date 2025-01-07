@@ -1,5 +1,5 @@
 import streamlit as st
-from home import nav_bar
+from home import nav_bar, credits
 
 import fastf1.ergast
 import plotly.express as px # https://dash.plotly.com/minimal-app
@@ -49,6 +49,9 @@ def main():
                 st.error("Failed to load data.")
                 return
         st.success("Success!")
+
+        for _ in range(15): st.write("")
+        credits()
 
     st.title(f"{year} Constructors Championship | {location}")
     tabs = st.tabs(["👨‍👨‍👧‍👦 :orange[Standings]", ":orange[📈 Graph]"])

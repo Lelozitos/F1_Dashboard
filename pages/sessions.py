@@ -1,5 +1,5 @@
 import streamlit as st
-from home import nav_bar
+from home import nav_bar, credits
 
 import plotly.express as px
 import plotly.graph_objects as go
@@ -671,5 +671,9 @@ def main():
 
     else:
         st.header("<--- Select date from sidebar")
+
+    with st.sidebar:
+        for _ in range(10): st.write("")
+        credits()
 
 main()
