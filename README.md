@@ -58,7 +58,7 @@ This program is designed to provide comprehensive and interactive visualizations
 
 - [![Streamlit][Streamlit-img]][Streamlit.com]
 - [![FastF1][FastF1-img]][FastF1.com]
-<!-- - [![OpenF1][OpenF1-img]][OpenF1.com] -->
+- [![OpenF1][OpenF1-img]][OpenF1.com]
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 

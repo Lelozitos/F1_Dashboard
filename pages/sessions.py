@@ -9,6 +9,7 @@ import datetime
 
 import fastf1.plotting
 import fastf1.api
+import requests
 
 @st.cache_data(persist=True)
 def load_session(year, location, session):
@@ -460,6 +461,39 @@ def graph_drivers_start(session):
 
     return fig
 
+def graph_teams_pitstop(session):
+    pits = requests.get(f"https://api.openf1.org/v1/pit?session_key={session.session_info["Key"]}")
+    pits = pd.DataFrame(pits.json())
+    pits["team"] = pits["driver_number"]
+    pits["team"] = pits["team"].apply(lambda x: fastf1.plotting.get_team_name_by_driver(session.get_driver(str(x))["Abbreviation"], session))
+    
+    pits = pits[["pit_duration", "team"]]
+    pits = pits.groupby("team")
+    pits = pits.sum().reset_index()
+    pits.sort_values("pit_duration", inplace=True)
+
+    team_colors = []
+    for team in pits["team"].unique():
+        color = fastf1.plotting.team_color(team)
+        team_colors.append(color)
+
+    fig = px.bar(
+        pits,
+        x="team",
+        y="pit_duration",
+        color="team",
+        color_discrete_sequence=team_colors,
+        text_auto=True
+    )
+
+    fig.update_layout(
+        title={"text": "Time in Pits", "font": {"size": 30, "family": "Arial"}, "automargin": True, "xanchor": "center", "x": 0.5, "yanchor": "top", "y": 0.9},
+        xaxis_title="Team",
+        yaxis_title="Pit Duration (s)",
+    )
+
+    return fig
+
 def graph_drivers_fastest_lap_telemetry(session):
     telemetries = []
     for driver in session.drivers:
@@ -468,6 +502,8 @@ def graph_drivers_fastest_lap_telemetry(session):
             telemetry = lap.get_car_data().add_distance()
             telemetry["Driver"] = session.get_driver(driver)["Abbreviation"]
             telemetry["LapTime (s)"] = lap["LapTime"].total_seconds()
+            telemetry["Compound"] = lap["Compound"]
+            telemetry["TyreLife"] = lap["TyreLife"]
             telemetries.append(telemetry)
         except: pass
     
@@ -484,11 +520,14 @@ def graph_drivers_fastest_lap_telemetry(session):
         y="Speed",
         color="Driver",
         color_discrete_sequence=colors,
-        hover_data=["Speed", "Brake", "RPM", "nGear", "LapTime (s)"],
+        hover_data=["Speed", "Throttle", "Brake", "RPM", "nGear", "LapTime (s)", "Compound", "TyreLife"],
         markers=True
     )
 
     # TODO add curves distances
+    for curve in session.get_circuit_info().corners.iterrows():
+        curve = curve[1]
+        fig.add_vline(x=curve["Distance"], line_dash="dot", line_color="gray", annotation_text=curve["Number"], annotation_position="bottom right")
 
     fig.update_layout(
         title={"text": "Speed throughout fastest lap", "font": {"size": 30, "family": "Arial"}, "automargin": True, "xanchor": "center", "x": 0.5, "yanchor": "top", "y": 0.9},
@@ -511,7 +550,7 @@ def graph_weather(session):
     weather_data.drop_duplicates(subset=["CurrentLap"], keep="last", inplace=True)
 
     raining = False
-    if weather_data["Rainfall"].sum() > len(weather_data.index) * .3:
+    if weather_data["Rainfall"].any(): # len(weather_data.index) * .3
         raining = True
 
     fig = px.line(
@@ -592,7 +631,7 @@ def load_graphs(session):
     if session.session_info["Type"] == "Race":
         cols = st.columns(2)
         cols[0].plotly_chart(graph_drivers_start(session))
-        # cols[1].plotly_chart(graph_teams_pitstop(session)) # TODO do it
+        # cols[1].plotly_chart(graph_teams_pitstop(session)) # TODO API too broken to be reliable
     
     cols = st.columns(2)
     cols[0].plotly_chart(graph_drivers_fastest_lap_telemetry(session))
