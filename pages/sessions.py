@@ -460,6 +460,44 @@ def graph_drivers_start(session):
 
     return fig
 
+def graph_drivers_fastest_lap_telemetry(session):
+    telemetries = []
+    for driver in session.drivers:
+        try: # If driver has no laps, it will give an error
+            lap = session.laps.pick_drivers([driver]).pick_fastest()
+            telemetry = lap.get_car_data().add_distance()
+            telemetry["Driver"] = session.get_driver(driver)["Abbreviation"]
+            telemetry["LapTime (s)"] = lap["LapTime"].total_seconds()
+            telemetries.append(telemetry)
+        except: pass
+    
+    telemetries = pd.concat(telemetries)
+
+    colors = []
+    for driver in telemetries["Driver"].unique():
+        try: colors.append(fastf1.plotting.driver_color(driver))
+        except: colors.append("gray")
+
+    fig = px.line(
+        telemetries,
+        x="Distance",
+        y="Speed",
+        color="Driver",
+        color_discrete_sequence=colors,
+        hover_data=["Speed", "Brake", "RPM", "nGear", "LapTime (s)"],
+        markers=True
+    )
+
+    # TODO add curves distances
+
+    fig.update_layout(
+        title={"text": "Speed throughout fastest lap", "font": {"size": 30, "family": "Arial"}, "automargin": True, "xanchor": "center", "x": 0.5, "yanchor": "top", "y": 0.9},
+        xaxis_title="Distance (m)",
+        yaxis_title="Speed (km/h)",
+    )
+
+    return fig
+
 def graph_drivers_curves(session): # https://plotly.com/python/v3/dropdowns/
     # choose lap and curve to analyze the speed, throttle and brake
     pass
@@ -480,17 +518,17 @@ def graph_weather(session):
         weather_data,
         x="CurrentLap",
         y=["AirTemp", "TrackTemp"],
-        labels={"value": "Temperature (°C)", "variable": "Temperature"},
+        labels={"value": "Temperature (°C)"},
         title="Weather Data Analysis",
         color_discrete_map={"AirTemp": "blue", "TrackTemp": "red"},
         markers=True,
     )
 
     fig.update_layout(
-        xaxis_title="Time",
+        title={"text": f"Weather Data Analysis | {'Raining' if raining else 'Clear'}", "font": {"size": 30, "family": "Arial"}, "automargin": True, "xanchor": "center", "x": 0.5, "yanchor": "top", "y": 0.9},
+        xaxis_title="Lap №",
         yaxis_title="Temperature (°C)",
         legend_title="Temperature",
-        title={"text": f"Weather Data Analysis | {'Raining' if raining else 'Clear'}", "font": {"size": 30, "family": "Arial"}, "automargin": True, "xanchor": "center", "x": 0.5, "yanchor": "top", "y": 0.9},
     )
     
     # TODO if it stops raining and starts again, it will fail
@@ -557,6 +595,7 @@ def load_graphs(session):
         # cols[1].plotly_chart(graph_teams_pitstop(session)) # TODO do it
     
     cols = st.columns(2)
+    cols[0].plotly_chart(graph_drivers_fastest_lap_telemetry(session))
     cols[1].plotly_chart(graph_weather(session))
 
 def main():
