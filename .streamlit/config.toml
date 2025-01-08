@@ -3,10 +3,11 @@ showSidebarNavigation = false
 toolbarMode = "auto" # auto developer viewer minimal
 
 [theme]
-base = "dark"
-primaryColor = "#F63366"
-backgroundColor = "black"
-secondaryBackgroundColor = "purple"
+base = "light"
+primaryColor = "#A69EB0"
+backgroundColor = "#FFFFFF"
+textColor = "black"
+secondaryBackgroundColor = "#DADAE3"
 font = "monospace"
 
 [browser]

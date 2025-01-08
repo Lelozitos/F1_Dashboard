@@ -13,8 +13,8 @@
     <a href="https://github.com/Lelozitos/F1_Dashboard"><strong>Explore the docs »</strong></a>
     <br />
     <br />
-    <!--<a href="https://github.com/Lelozitos/F1_Dashboard">View Demo</a>-->
-    <!--·-->
+    <a href="https://www.youtube.com/watch?v=K-KOvKbXpBs">View Demo</a>
+    ·
     <a href="https://github.com/Lelozitos/F1_Dashboard/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
     ·
     <a href="https://github.com/Lelozitos/F1_Dashboard/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
@@ -46,7 +46,7 @@
 
 ## ✨ About The Project
 
-[![F1 Dashboard v0.8.2](https://img.youtube.com/vi/K-KOvKbXpBs/0.jpg)](https://www.youtube.com/watch?v=K-KOvKbXpBs 'F1 Dashboard v0.8.2')
+[![F1 Dashboard v0.8.2](https://img.youtube.com/vi/K-KOvKbXpBs/maxresdefault.jpg)](https://www.youtube.com/watch?v=K-KOvKbXpBs 'F1 Dashboard v0.8.2')
 
 This program is designed to provide comprehensive and interactive visualizations of Formula 1 data. From telemetry analysis to driver and team performance comparisons, it offers users the ability to explore and understand the intricate details of the sport. Whether you’re tracking lap times, analyzing speed differentials, or studying historical race data, this tool delivers an engaging and intuitive experience. Perfect for fans, analysts, and engineers looking to deepen their understanding of F1 dynamics.
 
@@ -84,7 +84,7 @@ This program is designed to provide comprehensive and interactive visualizations
 
 1. Running the app
    ```sh
-   streamlit run ./home.py
+   python -m streamlit run ./home.py
    ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -109,31 +109,36 @@ Once the website is open, you can navigate through diffent tabs in the navigatio
 
 ## 🚀 Roadmap
 
-- [ x ] Add demo
-- [ x ] Finish Home
-- [ x ] Finish Contact
+- [x] Add demo
+- [x] Finish Home
+- [x] Finish Contact
 - [ ] Add more Graphs
   - [ ] Session
+    - [ ] Light mode compatibility
     - [ ] Qualifying deleted laps to analyze
     - [ ] Overtake graph, with close distances to ahead
     - [ ] Choose the curve and give statistics of it
+    - [ ] Join every practice data
+    - [ ] Wind graph
   - [ ] Teams
   - [ ] Drivers
     - [ ] Add nationality flags
 - [ ] Improve UI
-  - [ x ] Sessions with a podium like UI
-  - [ x ] More obvious starting grid
-  - [ ] Format Time in graphs
-  - [ x ] There is no way of knowing driver's name by abbreviation
+  - [x] Sessions with a podium like UI
+  - [x] More obvious starting grid
+  - [x] Format Time in graphs
+  - [x] There is no way of knowing driver's name by abbreviation
+  - [x] Increase contrast in light mode (haas and hard tyre)
+  - [ ] Change _hover_data_ with manual _hovertemplate_
 - [ ] Videos
   - [ ] Embed video of highlights by F1 YT (https://www.youtube.com/@Formula1)
   - [ ] Add a way to see a video simultaneously (break and acceleration in curves)
 - [ ] Bug Fixes
-  - [ x ] Albon in São Paulo 2024 giving error (maybe he didn't start?)
+  - [x] Albon in São Paulo 2024 giving error (maybe he didn't start?)
   - [ ] Fix old drivers colors
-  - [ x ] Fix new year without races
+  - [x] Fix new year without races
   - [ ] Sometimes graphs titles don't show up (couldn't reproduce it)
-  - [ ] Driver and Compound color deprecated, however new alternative doesn't suit me
+  - [ x ] Driver and Compound color deprecated, however new alternative doesn't suit me
   - [ ] If it starts raining in the middle of the race, quicklaps doesn't work and wo_laps suck (monaco 2023)
 - [ ] Add Circuits page
 - [ ] Change files of graphs logic
@@ -150,7 +155,7 @@ See the [open issues](https://github.com/Lelozitos/F1_Dashboard/issues) for a fu
 
 ## 📞 Contact
 
-Leandro Fabre - [LinkedIn](https://www.linkedin.com/in/leandrofabre/)
+Leandro Fabre - [LinkedIn](https://www.linkedin.com/in/leandrofabre/)  
 Leandro Fabre - [Email](mailto:lm.fabre@hotmail.com)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>

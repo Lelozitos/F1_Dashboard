@@ -36,8 +36,6 @@ def main():
         year = st.selectbox("Year", range(datetime.date.today().year, 2018-1, -1))
         data = fastf1.events.get_event_schedule(year).query("EventFormat != 'testing'")
         data.set_index("EventName", inplace=True)
-        # print("a\n"*50)
-        # print(type(datetime.timedelta(hours=4)))
         data = data[data["Session5DateUtc"] < (pd.Timestamp.utcnow() - pd.Timedelta("4h")).to_datetime64()]
         location = st.selectbox("Event", data.index[::-1])
 
