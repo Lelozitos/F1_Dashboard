@@ -119,7 +119,7 @@ Once the website is open, you can navigate through diffent tabs in the navigatio
     - [ ] Overtake graph, with close distances to ahead
     - [ ] Choose the curve and give statistics of it
     - [ ] Join every practice data
-    - [ ] Wind graph
+    - [x] Wind graph
   - [ ] Teams
   - [ ] Drivers
     - [ ] Add nationality flags
@@ -138,7 +138,7 @@ Once the website is open, you can navigate through diffent tabs in the navigatio
   - [ ] Fix old drivers colors
   - [x] Fix new year without races
   - [ ] Sometimes graphs titles don't show up (couldn't reproduce it)
-  - [ x ] Driver and Compound color deprecated, however new alternative doesn't suit me
+  - [x] Driver and Compound color deprecated, however new alternative doesn't suit me
   - [ ] If it starts raining in the middle of the race, quicklaps doesn't work and wo_laps suck (monaco 2023)
 - [ ] Add Circuits page
 - [ ] Change files of graphs logic
