@@ -11,6 +11,7 @@ def load_session(year, location, session):
     print(year, location, session)
     data = fastf1.get_session(year, location, session)
     data.load(laps=True, telemetry=True, weather=True, messages=False, livedata=None)
+    print(data.results)
     return data
 
 def graph_results(session):
@@ -34,6 +35,7 @@ def graph_results(session):
     # TODO HeadshotURL awful quality
     # TODO old photos does not work
     cols = st.columns(3)
+    print(results)
     for i in range(3):
         driver = results.iloc[i]
         with cols[i].container(border=True):

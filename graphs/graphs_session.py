@@ -113,15 +113,18 @@ def graph_drivers_consistency(session): # TODO add safety car periods and yellow
     transformed_laps = laps.copy()
     transformed_laps["LapTime (s)"] = transformed_laps["LapTime"].dt.total_seconds()
 
-    driver_order = (transformed_laps[["Driver", "LapTime (s)"]].groupby("Driver").median()["LapTime (s)"].sort_values().index)
-    
+    driver_order = (
+        transformed_laps[["Driver", "LapTime (s)"]]
+        .groupby("Driver").median()["LapTime (s)"].sort_values().index
+    )
+
     colors = []
     for driver in driver_order:
         try: colors.append(fastf1.plotting.get_driver_color(driver, session))
         except: colors.append("gray")
 
-    transformed_laps = transformed_laps.set_index("Driver")
-    transformed_laps = transformed_laps.loc[driver_order]
+    transformed_laps["Driver"] = pd.Categorical(transformed_laps["Driver"], categories=driver_order, ordered=True)
+    transformed_laps = transformed_laps.sort_values(["Driver", "LapNumber"])
     transformed_laps["Compound"] = transformed_laps["Compound"].apply(str.capitalize)
 
     fig = px.line(
@@ -129,7 +132,7 @@ def graph_drivers_consistency(session): # TODO add safety car periods and yellow
         x="LapNumber",
         y="LapTime (s)",
         hover_data=["Team", "LapNumber", "Compound", "Stint", "TyreLife"],
-        color=transformed_laps.index,
+        color="Driver",
         color_discrete_sequence=colors,
         markers=True
     )
@@ -544,8 +547,8 @@ def graph_drivers_start(session):
         driver_data = telemetries[telemetries["Driver"] == driver]
         
         # Find the time to reach 100 km/h and 200 km/h
-        time_100 = driver_data[driver_data["Speed"] > 100].iloc[0]["Time"] if not driver_data[driver_data["Speed"] > 100].empty else None
-        time_200 = driver_data[driver_data["Speed"] > 200].iloc[0]["Time"] if not driver_data[driver_data["Speed"] > 200].empty else None
+        time_100 = driver_data[driver_data["Speed"] > 100].iloc[0]["Time"] if not driver_data[driver_data["Speed"] > 100].empty else 0
+        time_200 = driver_data[driver_data["Speed"] > 200].iloc[0]["Time"] if not driver_data[driver_data["Speed"] > 200].empty else 0
         
         # Append the results to the DataFrame
         speed_times = pd.concat([speed_times, pd.DataFrame([[driver, time_100, time_200-time_100, time_200]], columns=speed_times.columns)], ignore_index=True)
