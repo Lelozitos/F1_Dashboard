@@ -94,7 +94,8 @@ def load_standings(standings, year, round):
         driver = standings.iloc[i]
         with cols[i].container(border=True):
             st.markdown(f"{driver['position']} | {driver['givenName']} {driver['familyName']} - {int(driver['points'])} {'*Can* win' if driver['points'] + MAX_POINTS >= LEADER_POINTS else '*Can\'t* win'} | {driver['constructorNames'][0]}")
-            st.markdown(f"[![{driver['driverCode']}](https://media.formula1.com/d_driver_fallback_image.png/content/dam/fom-website/drivers/{driver['givenName'][:1]}/{driver['givenName'][:3].upper()}{driver['familyName'][:3].upper()}01_{driver['givenName']}_{driver['familyName']}/{driver['givenName'][:3].lower()}{driver['familyName'][:3].lower()}01.png)]({driver['driverUrl']})") # "https://media.formula1.com/image/upload/f_auto,c_limit,q_75,w_1320/content/dam/fom-website/drivers/{year}Drivers/{driver['familyName'].lower()}"
+            if driver['givenName'] == "Andrea Kimi":  st.markdown(f"[![{driver['driverCode']}](https://media.formula1.com/d_driver_fallback_image.png/content/dam/fom-website/drivers/K/ANDANT01_Kimi_Antonelli/andant01.png)]({driver['driverUrl']})") # "https://media.formula1.com/image/upload/f_auto,c_limit,q_75,w_1320/content/dam/fom-website/drivers/{year}Drivers/{driver['familyName'].lower()}"
+            else: st.markdown(f"[![{driver['driverCode']}](https://media.formula1.com/d_driver_fallback_image.png/content/dam/fom-website/drivers/{driver['givenName'][:1]}/{driver['givenName'][:3].upper()}{driver['familyName'][:3].upper()}01_{driver['givenName']}_{driver['familyName']}/{driver['givenName'][:3].lower()}{driver['familyName'][:3].lower()}01.png)]({driver['driverUrl']})") # "https://media.formula1.com/image/upload/f_auto,c_limit,q_75,w_1320/content/dam/fom-website/drivers/{year}Drivers/{driver['familyName'].lower()}"
 
     for i in range(3, len(standings.index), 4):
         cols = st.columns(4)
@@ -103,7 +104,8 @@ def load_standings(standings, year, round):
                 driver = standings.iloc[i+j]
                 with cols[j].container(border=True):
                     st.markdown(f"{driver['position']} | {driver['givenName']} {driver['familyName']} - {int(driver['points'])} {'*Can* win' if driver['points'] + MAX_POINTS >= LEADER_POINTS else '*Can\'t* win'} | {driver['constructorNames'][0]}")
-                    st.markdown(f"[![{driver['driverCode']}](https://media.formula1.com/d_driver_fallback_image.png/content/dam/fom-website/drivers/{driver['givenName'][:1]}/{driver['givenName'][:3].upper()}{driver['familyName'][:3].upper()}01_{driver['givenName']}_{driver['familyName']}/{driver['givenName'][:3].lower()}{driver['familyName'][:3].lower()}01.png)]({driver['driverUrl']})") # "https://media.formula1.com/image/upload/f_auto,c_limit,q_75,w_1320/content/dam/fom-website/drivers/{year}Drivers/{driver['familyName'].lower()}"
+                    if driver['givenName'] == "Andrea Kimi":  st.markdown(f"[![{driver['driverCode']}](https://media.formula1.com/d_driver_fallback_image.png/content/dam/fom-website/drivers/K/ANDANT01_Kimi_Antonelli/andant01.png)]({driver['driverUrl']})") # "https://media.formula1.com/image/upload/f_auto,c_limit,q_75,w_1320/content/dam/fom-website/drivers/{year}Drivers/{driver['familyName'].lower()}"
+                    else: st.markdown(f"[![{driver['driverCode']}](https://media.formula1.com/d_driver_fallback_image.png/content/dam/fom-website/drivers/{driver['givenName'][:1]}/{driver['givenName'][:3].upper()}{driver['familyName'][:3].upper()}01_{driver['givenName']}_{driver['familyName']}/{driver['givenName'][:3].lower()}{driver['familyName'][:3].lower()}01.png)]({driver['driverUrl']})") # "https://media.formula1.com/image/upload/f_auto,c_limit,q_75,w_1320/content/dam/fom-website/drivers/{year}Drivers/{driver['familyName'].lower()}"
 
             except: continue
 

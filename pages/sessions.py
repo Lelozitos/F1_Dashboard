@@ -41,7 +41,8 @@ def graph_results(session):
         with cols[i].container(border=True):
             if session.session_info["Type"] == "Race": st.markdown(f"{int(driver['Position'])} | {driver['FullName']} - {int(driver['Points'])} | {driver['TeamName']} | +{driver['Display']}")
             else: st.markdown(f"{int(driver['Position'])} | {driver['FullName']} | {driver['TeamName']} | +{driver['Display']}")
-            st.image(driver['HeadshotUrl'], use_container_width=True)
+            # st.image(driver['HeadshotUrl'], use_container_width=True)
+            # st.markdown(f"[![{driver['driverCode']}](https://media.formula1.com/d_driver_fallback_image.png/content/dam/fom-website/drivers/{driver['givenName'][:1]}/{driver['givenName'][:3].upper()}{driver['familyName'][:3].upper()}01_{driver['givenName']}_{driver['familyName']}/{driver['givenName'][:3].lower()}{driver['familyName'][:3].lower()}01.png)]({driver['driverUrl']})")
 
     with st.expander("more..."):
         for i in range(3, len(results.index), 4):

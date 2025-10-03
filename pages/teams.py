@@ -8,22 +8,24 @@ import numpy as np
 import datetime
 
 def load_standings(standings, year):
+    # Team name mapping for logo URLs
+    team_name_map = {
+        "Red-Bull": "Red-Bull-Racing",
+        "Sauber": "Kick-Sauber",
+        "Alfa-Romeo": "Alfa-Romeo-Racing",
+    }
     for i in range(0, 10, 2):
         cols = st.columns(2)
         for j in range(2):
             with cols[j].container(border=True):
-                # TODO 2018 not supported
                 team = standings.iloc[i+j]
-                team['constructorName'] = team['constructorName'].replace(" ", "-")
-                
-                # TODO very instable, better to solve with own api
-                if team['constructorName'] != "Haas-F1-Team": team['constructorName'] = team['constructorName'].replace("-F1-Team", "")
-                if team['constructorName'] == "Red-Bull": team['constructorName'] = "Red-Bull-Racing"
-                if team['constructorName'] == "Sauber": team['constructorName'] = "Kick-Sauber"
-                if team['constructorName'] == "Alfa-Romeo": team['constructorName'] = "Alfa-Romeo-Racing"
+                name = team['constructorName'].replace(" ", "-")
+                name = name.replace("-F1-Team", "")
+                name = team_name_map.get(name, name)
 
-                st.markdown(f"{int(team['position'])} | {team['constructorName']} - {int(team['points'])}")
-                st.markdown(f"![{team['constructorName']}](https://media.formula1.com/content/dam/fom-website/teams/{year}/{team['constructorName']}.png) ![{team['constructorName']}](https://media.formula1.com/content/dam/fom-website/teams/{year}/{team['constructorName']}-logo.png)")
+                st.markdown(f"{int(team['position'])} | {name} - {int(team['points'])}")
+                if name == "RB": st.markdown(f"![{name}](https://media.formula1.com/content/dam/fom-website/teams/{year}/{name}.png) ![{name}](https://media.formula1.com/content/dam/fom-website/teams/{year}/Racing-Bulls-logo.png)")
+                else: st.markdown(f"![{name}](https://media.formula1.com/content/dam/fom-website/teams/{year}/{name}.png) ![{name}](https://media.formula1.com/content/dam/fom-website/teams/{year}/{name}-logo.png)")
 
 def load_graphs(standings):
     pass
