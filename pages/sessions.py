@@ -2,11 +2,12 @@ import streamlit as st
 from home import nav_bar, credits
 
 from graphs.graphs_session import *
+import fastf1
 
 import pandas as pd
 import datetime
 
-@st.cache_data(persist=True)
+@st.cache_resource
 def load_session(year, location, session):
     print(year, location, session)
     data = fastf1.get_session(year, location, session)
@@ -98,9 +99,9 @@ def main():
 
     with st.sidebar:
         year = st.selectbox("Year", range(datetime.date.today().year, 2018 - 1, -1)) # Data only goes back to 2018
-        data = fastf1.events.get_event_schedule(year).query("EventFormat != 'testing'")
+        data = fastf1.get_event_schedule(year).query("EventFormat != 'testing'")
         data.set_index("EventName", inplace=True)
-        data = data[data["Session5DateUtc"] < (pd.Timestamp.utcnow() - pd.Timedelta("4h")).to_datetime64()]
+        data = data[data["Session1DateUtc"] < (pd.Timestamp.utcnow()).to_datetime64()]
         location = st.selectbox("Event", data.index[::-1])
         try: data = data.loc[location]
         except:

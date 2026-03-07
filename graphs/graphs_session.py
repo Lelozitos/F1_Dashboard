@@ -6,8 +6,9 @@ import numpy as np
 import datetime
 
 import fastf1.plotting
-import fastf1.api
+import fastf1
 import requests
+from .colors import get_team_color_safe, get_driver_color_safe, get_compound_mapping_safe
 
 def graph_drivers_posistion(session):
     colors = []
@@ -31,8 +32,7 @@ def graph_drivers_posistion(session):
     laps.sort_values(["LapNumber"], inplace=True)
     laps = laps.loc[session.drivers] # Filter out drivers not in laps, might cause an error
     for driver in laps["Driver"].unique():
-        try: colors.append(fastf1.plotting.get_driver_color(driver, session))
-        except: colors.append("gray")
+        colors.append(get_driver_color_safe(driver, session))
 
     fig = px.line(
         laps,
@@ -70,7 +70,12 @@ def graph_drivers_posistion(session):
 def graph_drivers_fastest_laps_time(session):
     fastest_laps = []
     for driver in session.drivers:
-        fastest_laps.append(session.laps.pick_drivers([driver]).pick_fastest())
+        lap = session.laps.pick_drivers([driver]).pick_fastest()
+        if lap is not None:
+            fastest_laps.append(lap)
+
+    if not fastest_laps:
+        return None # Or handle appropriately, e.g., return an empty figure
 
     fastest_laps = fastf1.core.Laps(fastest_laps).sort_values(by="LapTime").reset_index(drop=True)
 
@@ -80,8 +85,7 @@ def graph_drivers_fastest_laps_time(session):
 
     team_colors = []
     for team in fastest_laps["Team"].unique():
-        color = fastf1.plotting.get_team_color(team, session)
-        team_colors.append(color)
+        team_colors.append(get_team_color_safe(team, session))
 
     fig = px.bar(
         fastest_laps,
@@ -120,12 +124,14 @@ def graph_drivers_consistency(session): # TODO add safety car periods and yellow
 
     colors = []
     for driver in driver_order:
-        try: colors.append(fastf1.plotting.get_driver_color(driver, session))
-        except: colors.append("gray")
+        colors.append(get_driver_color_safe(driver, session))
 
     transformed_laps["Driver"] = pd.Categorical(transformed_laps["Driver"], categories=driver_order, ordered=True)
     transformed_laps = transformed_laps.sort_values(["Driver", "LapNumber"])
     transformed_laps["Compound"] = transformed_laps["Compound"].apply(str.capitalize)
+
+    if transformed_laps.empty:
+        return None
 
     fig = px.line(
         transformed_laps,
@@ -172,8 +178,7 @@ def graph_teams_boxplot(session):
 
     colors = []
     for team in team_order:
-        try: colors.append(fastf1.plotting.get_team_color(team, session))
-        except: colors.append("gray")
+        colors.append(get_team_color_safe(team, session))
 
     transformed_laps = transformed_laps.set_index("Team")
     transformed_laps = transformed_laps.loc[team_order]
@@ -235,8 +240,7 @@ def graph_drivers_boxplot(session):
     
     colors = []
     for driver in driver_order:
-        try: colors.append(fastf1.plotting.get_driver_color(driver, session))
-        except: colors.append("gray")
+        colors.append(get_driver_color_safe(driver, session))
 
     transformed_laps = transformed_laps.set_index("Driver")
     transformed_laps = transformed_laps.loc[driver_order]
@@ -299,7 +303,7 @@ def graph_drivers_stints(session): # TODO LapNumber in this case is the duration
         x="LapNumber",
         y="Driver",
         color="Compound",
-        color_discrete_map=fastf1.plotting.get_compound_mapping(session),
+        color_discrete_map=get_compound_mapping_safe(session),
         hover_data=["Stint", "Compound"],
         orientation="h",
         pattern_shape="FreshTyre",
@@ -345,7 +349,7 @@ def graph_overall_tyre(session):
         x="TyreLife",
         y="LapTime",
         color="Compound",
-        color_discrete_map=fastf1.plotting.get_compound_mapping(session),
+        color_discrete_map=get_compound_mapping_safe(session),
         hover_data=["LapTime"],
         markers=True
     )
@@ -375,20 +379,19 @@ def graph_drivers_top_speed(session): # TODO add 5 or 10 top speeds
     top_speeds = []
        
     for driver in session.drivers:
-        try: # If driver has no laps, it will give an error
+        try:
             telemetry = session.laps.pick_drivers([driver]).get_car_data()
+            if telemetry.empty: continue
             telemetry["Driver"] = session.get_driver(driver)["Abbreviation"]
             top_speeds.append(telemetry.iloc[telemetry["Speed"].idxmax()])
         except: pass
 
     top_speeds = pd.DataFrame(top_speeds)
-    top_speeds["DRS"] = top_speeds["DRS"] > 9 # not certain about drs number
     top_speeds = top_speeds.sort_values(by="Speed", ascending=False).reset_index(drop=True)
 
     colors = []
     for driver in top_speeds["Driver"]:
-        try: colors.append(fastf1.plotting.get_driver_color(driver, session))
-        except: colors.append("gray")
+        colors.append(get_driver_color_safe(driver, session))
 
     fig = px.bar(
         top_speeds,
@@ -397,8 +400,6 @@ def graph_drivers_top_speed(session): # TODO add 5 or 10 top speeds
         color="Driver",
         color_discrete_sequence=colors,
         hover_data=["Speed"], # TODO add "LapNumber", "Compound", "Stint"
-        pattern_shape="DRS", # TODO remove DRS from legend
-        pattern_shape_map={True: "/", False: ""},
         text_auto=True,
         )
 
@@ -427,6 +428,7 @@ def graph_car_style(session):
     for driver in session.drivers:
         try: # If driver has no laps, it will give an error
             telemetry = session.laps.pick_drivers([driver]).pick_quicklaps().get_car_data() # Remove pit lanes for mean speed
+            if telemetry.empty: continue
             telemetry["Driver"] = session.get_driver(driver)["Abbreviation"]
             telemetry["MeanSpeed"] = telemetry["Speed"].mean()
             telemetry.rename(columns={"Speed": "TopSpeed"}, inplace=True)
@@ -434,12 +436,10 @@ def graph_car_style(session):
         except: pass
 
     speeds = pd.DataFrame(speeds)
-    speeds["DRS"] = speeds["DRS"] > 9 # not certain about drs number
 
     colors = []
     for driver in speeds["Driver"]:
-        try: colors.append(fastf1.plotting.get_driver_color(driver, session))
-        except: colors.append("gray")
+        colors.append(get_driver_color_safe(driver, session))
 
     fig = px.scatter(
         speeds,
@@ -447,7 +447,6 @@ def graph_car_style(session):
         y="TopSpeed",
         color="Driver",
         color_discrete_sequence=colors,
-        hover_data=["DRS"],
         )
 
     fig.update_layout(
@@ -502,8 +501,7 @@ def graph_drivers_start(session):
 
     colors = []
     for driver in telemetries["Driver"].unique():
-        try: colors.append(fastf1.plotting.get_driver_color(driver, session))
-        except: colors.append("gray")
+        colors.append(get_driver_color_safe(driver, session))
 
     # GRAPHS
 
@@ -589,8 +587,7 @@ def graph_teams_pitstop(session):
 
     team_colors = []
     for team in pits["team"].unique():
-        color = fastf1.plotting.get_team_color(team, session)
-        team_colors.append(color)
+        team_colors.append(get_team_color_safe(team, session))
 
     fig = px.bar(
         pits,
@@ -626,8 +623,7 @@ def graph_drivers_fastest_lap_telemetry(session):
 
     colors = []
     for driver in telemetries["Driver"].unique():
-        try: colors.append(fastf1.plotting.get_driver_color(driver, session))
-        except: colors.append("gray")
+        colors.append(get_driver_color_safe(driver, session))
 
     fig = px.line(
         telemetries,
