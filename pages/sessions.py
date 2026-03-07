@@ -65,7 +65,8 @@ def load_graphs(session):
     cols = st.columns(2)
     if session.session_info["Type"] == "Race": cols[0].plotly_chart(graph_drivers_posistion(session))
     else: cols[0].plotly_chart(graph_drivers_fastest_laps_time(session))
-    cols[1].plotly_chart(graph_drivers_consistency(session))
+    chart = graph_drivers_consistency(session)
+    if chart is not None: cols[1].plotly_chart(chart)
 
     cols = st.columns(2)
     cols[0].plotly_chart(graph_teams_boxplot(session))
@@ -80,7 +81,8 @@ def load_graphs(session):
     cols[1].plotly_chart(graph_car_style(session))
 
     cols = st.columns(2)
-    cols[0].plotly_chart(graph_drivers_fastest_lap_telemetry(session))
+    graph = graph_drivers_fastest_lap_telemetry(session)
+    if graph is not None: cols[0].plotly_chart(graph)
 
     if session.session_info["Type"] == "Race":
         cols = st.columns([2,2,1])
@@ -107,13 +109,21 @@ def main():
         except:
             st.error("Failed to load data.")
             return
-        session = []
+        session_names = []
+        now = pd.Timestamp.utcnow().to_datetime64()
         for i in range(5, 0, -1):
-            try: session.append(data.get_session_name(i)) # in case there is no practice 2, 3
-            except ValueError as e:
-                if "does not exist for this event" in e.__str__(): continue
-                raise e
-        session = st.selectbox("Session", session) # [data.get_session_name(i) for i in range(5, 0, -1)]
+            try:
+                # Use data dictionary from get_event_schedule
+                if data[f"Session{i}DateUtc"] < now:
+                    session_names.append(data.get_session_name(i))
+            except (ValueError, KeyError):
+                continue
+        
+        if not session_names:
+            st.warning("No finished sessions found for this event.")
+            return
+
+        session = st.selectbox("Session", session_names)
 
     if st.sidebar.button("Load", use_container_width=True):
         placeholder = st.sidebar.empty()
