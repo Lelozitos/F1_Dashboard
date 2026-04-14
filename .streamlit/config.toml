@@ -4,11 +4,11 @@ toolbarMode = "auto" # auto developer viewer minimal
 
 [theme]
 base = "light"
-primaryColor = "#A69EB0"
+primaryColor = "#6C3DE8"
 backgroundColor = "#FFFFFF"
-textColor = "black"
-secondaryBackgroundColor = "#DADAE3"
-font = "monospace"
+secondaryBackgroundColor = "#F0EBFC"
+textColor = "#1A1A2E"
+font = "sans serif"
 
 [browser]
 gatherUsageStats = false

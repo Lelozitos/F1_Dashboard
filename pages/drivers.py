@@ -1,7 +1,9 @@
 import streamlit as st
 from home import nav_bar, credits
 
-import fastf1.ergast
+import fastf1
+from fastf1.ergast import Ergast
+
 import plotly.express as px # https://dash.plotly.com/minimal-app
 import pandas as pd
 import numpy as np
@@ -20,7 +22,7 @@ def calculate_max_points(year, round):
     return (sprint_events*POINTS_FOR_SPRINT) + (conventional_events*POINTS_FOR_CONVENTIONAL)
 
 def load_data(year, location):
-    ergast = fastf1.ergast.Ergast()
+    ergast = Ergast()
     races = ergast.get_race_schedule(year)
     races = races.loc[:races.index[races["raceName"] == location][0]]
     results = []
@@ -110,7 +112,7 @@ def load_standings(standings, year, round):
             except: continue
 
 def main():
-    ergast = fastf1.ergast.Ergast()
+    ergast = Ergast()
     nav_bar()
 
     with st.sidebar:

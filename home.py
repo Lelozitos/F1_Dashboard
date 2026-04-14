@@ -12,12 +12,14 @@ def set_streamlit_page_config_once():
 def nav_bar():
     set_streamlit_page_config_once()
     st.header("F1 CONSULTING", divider="rainbow")
-    cols = st.columns(5)
+    cols = st.columns(7)
     cols[0].page_link("home.py", label="**Home**", icon="🏡")
     cols[1].page_link("pages/sessions.py", label="**Sessions**", icon="🏎")
-    cols[2].page_link("pages/teams.py", label="**Teams**", icon="👨‍👨‍👧‍👦")
+    cols[2].page_link("pages/teams.py", label=" **Teams**", icon="👨‍👨‍👧‍👦")
     cols[3].page_link("pages/drivers.py", label="**Drivers**", icon="🙍‍♂️")
-    cols[4].page_link("pages/contact.py", label="**Contact**", icon="📞")
+    cols[4].page_link("pages/seasons.py", label="**Seasons**", icon="📅")
+    cols[5].page_link("pages/circuits.py", label="**Circuits**", icon="🚗")
+    cols[6].page_link("pages/contact.py", label="**Contact**", icon="📞")
 
 def credits():
     st.title("📜 Credits")
@@ -63,6 +65,7 @@ def main():
     st.markdown("[F1 Analysis](https://f1-analysis.com)")
     st.markdown("[Formula Data Analysis](https://www.instagram.com/fdataanalysis/)")
 
-main()
+if __name__ == "__main__":
+    main()
 
 # https://public.tableau.com/app/profile/mateusz.karmalski/viz/F1ResultsTracker/Results 

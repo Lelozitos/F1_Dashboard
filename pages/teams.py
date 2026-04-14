@@ -1,7 +1,9 @@
 import streamlit as st
 from home import nav_bar, credits
 
-import fastf1.ergast
+import fastf1
+from fastf1.ergast import Ergast
+
 import plotly.express as px # https://dash.plotly.com/minimal-app
 import pandas as pd
 import numpy as np
@@ -14,7 +16,7 @@ def load_standings(standings, year):
         "Sauber": "Kick-Sauber",
         "Alfa-Romeo": "Alfa-Romeo-Racing",
     }
-    for i in range(0, 10, 2):
+    for i in range(0, 12, 2):
         cols = st.columns(2)
         for j in range(2):
             with cols[j].container(border=True):
@@ -31,7 +33,7 @@ def load_graphs(standings):
     pass
 
 def main():
-    ergast = fastf1.ergast.Ergast()
+    ergast = Ergast()
     nav_bar()
 
     with st.sidebar:
