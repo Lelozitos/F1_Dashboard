@@ -102,3 +102,49 @@ def get_driver_pattern_map(session):
 
 def get_driver_symbol_map(session):
     return _get_driver_style_map(session, ["circle", "x"])
+
+
+# (speed, downforce, braking, overtaking) — 1–5
+CIRCUIT_CHARS = {
+    "Bahrain":       (3, 3, 3, 4),
+    "Saudi Arabian": (5, 2, 4, 2),
+    "Australian":    (3, 3, 3, 2),
+    "Japanese":      (4, 4, 3, 2),
+    "Chinese":       (3, 3, 3, 3),
+    "Miami":         (3, 3, 4, 3),
+    "Monaco":        (1, 5, 4, 1),
+    "Spanish":       (3, 3, 3, 2),
+    "Barcelona":     (3, 4, 3, 2),
+    "Canadian":      (3, 2, 5, 4),
+    "Austrian":      (4, 2, 4, 4),
+    "British":       (4, 3, 3, 3),
+    "Hungarian":     (2, 4, 3, 1),
+    "Belgian":       (5, 2, 3, 4),
+    "Dutch":         (3, 4, 3, 1),
+    "Italian":       (5, 1, 5, 5),
+    "Azerbaijan":    (4, 2, 4, 4),
+    "Singapore":     (1, 5, 4, 2),
+    "United States": (3, 3, 4, 3),
+    "Mexico City":   (4, 2, 4, 3),
+    "São Paulo":     (3, 3, 3, 4),
+    "Las Vegas":     (5, 1, 3, 4),
+    "Qatar":         (4, 4, 3, 2),
+    "Abu Dhabi":     (3, 3, 3, 3),
+}
+
+# (speed, downforce, braking, traction) — car strengths, 1–5
+CONSTRUCTOR_CHARS = {
+    "Red Bull":      (4, 5, 4, 5),
+    "McLaren":       (5, 4, 5, 4),
+    "Ferrari":       (5, 4, 4, 4),
+    "Mercedes":      (4, 3, 5, 4),
+    "Aston Martin":  (3, 4, 4, 4),
+    "Alpine":        (3, 3, 3, 3),
+    "RB":            (3, 3, 4, 3),
+    "Racing Bulls":  (3, 3, 4, 3),
+    "Haas":          (3, 3, 3, 3),
+    "Williams":      (3, 3, 3, 3),
+    "Kick Sauber":   (2, 3, 3, 3),
+    "Sauber":        (2, 3, 3, 3),
+    "Cadillac":      (3, 3, 3, 3),
+}
