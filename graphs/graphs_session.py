@@ -12,6 +12,15 @@ import requests
 from .colors import get_team_color_safe, get_driver_color_safe, get_compound_mapping_safe, get_driver_line_dash_map, get_driver_pattern_map, get_driver_symbol_map
 
 
+def _hires_headshot(url):
+    if not url or not isinstance(url, str):
+        return url
+    import re
+    url = re.sub(r'w_\d+', 'w_1320', url)
+    url = re.sub(r'q_\d+', 'q_auto', url)
+    return url
+
+
 def graph_results(session):
     results = session.results
     results = results.sort_values(by="Position")
@@ -89,7 +98,7 @@ def graph_results(session):
             else:
                 st.markdown(f"**P{pos}** · {driver['FullName']}  \n{driver['TeamName']}  \n`{driver['Display']}`")
             try:
-                st.image(driver['HeadshotUrl'], width="stretch")
+                st.image(_hires_headshot(driver['HeadshotUrl']), use_container_width=True)
             except: pass
 
     with st.expander("more..."):
@@ -104,7 +113,7 @@ def graph_results(session):
                             st.markdown(f"**P{pos}** · {driver['FullName']} · {int(driver['Points'])} pts  \n{driver['TeamName']}  \n`{driver['Display']}`")
                         else:
                             st.markdown(f"**P{pos}** · {driver['FullName']}  \n{driver['TeamName']}  \n`{driver['Display']}`")
-                        st.image(driver['HeadshotUrl'], width="stretch")
+                        st.image(_hires_headshot(driver['HeadshotUrl']), use_container_width=True)
                 except: continue
 
 
