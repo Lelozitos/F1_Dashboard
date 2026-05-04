@@ -27,14 +27,15 @@ def nav_bar():
     set_streamlit_page_config_once()
     st.markdown(_CSS, unsafe_allow_html=True)
     st.header("F1 CONSULTING", divider="rainbow")
-    cols = st.columns(7)
+    cols = st.columns(8)
     cols[0].page_link("home.py",              label="**Home**",     icon="🏡")
     cols[1].page_link("pages/sessions.py",    label="**Sessions**", icon="🏎")
     cols[2].page_link("pages/teams.py",       label="**Teams**",    icon="🏗️")
     cols[3].page_link("pages/drivers.py",     label="**Drivers**",  icon="🙍")
     cols[4].page_link("pages/seasons.py",     label="**Seasons**",  icon="📅")
     cols[5].page_link("pages/circuits.py",    label="**Circuits**", icon="🏁")
-    cols[6].page_link("pages/contact.py",     label="**Contact**",  icon="📞")
+    cols[6].page_link("pages/predict.py",     label="**Predict**",  icon="🔮")
+    cols[7].page_link("pages/contact.py",     label="**Contact**",  icon="📞")
 
 def credits():
     st.title("📜 Credits")
@@ -131,6 +132,8 @@ _FEATURES = [
      "Full season overview with race-by-race points heatmap across an entire championship year."),
     ("Circuits",  "🏁",  "#6C3DE8",  "pages/circuits.py",
      "Season calendar, lap records, circuit facts, race winners, and historical win counts."),
+    ("Predict",   "🔮",  "#E8A020",  "pages/predict.py",
+     "ML-powered win probability predictions using grid position, standings, and recent form."),
     ("Contact",   "📞",  "#64C4FF",  "pages/contact.py",
      "Get in touch with the developer or explore the project on GitHub."),
 ]
