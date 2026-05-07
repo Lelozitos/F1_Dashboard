@@ -174,7 +174,7 @@ def main():
         st.session_state.current_selection = selection_key
         st.session_state.load_track_map = False
 
-    if st.sidebar.button("Load", width="stretch") or st.session_state.get('loaded_session', False):
+    if st.sidebar.button("Load", use_container_width=True) or st.session_state.get('loaded_session', False):
         if not st.session_state.get('loaded_session', False):
             placeholder = st.sidebar.empty()
             with placeholder, st.spinner("Loading..."):
