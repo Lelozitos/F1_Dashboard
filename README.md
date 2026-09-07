@@ -3,12 +3,12 @@
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
-  <a align="center" href="https://github.com/Lelozitos/F1_Dashboard" style="font-size:100px"> 🏎 </a>
+  <a align="center" href="https://github.com/Lelozitos/F1_Dashboard" style="font-size:100px"> 🏎️🤖 </a>
 
-<h3 align="center">F1 Dashboard</h3>
+<h3 align="center">F1 AI Agent</h3>
 
   <p align="center">
-    Unleashing the power of data-driven insights for Formula 1 enthusiasts.
+    Ask anything about Formula 1 — Claude looks up the real data before it answers.
     <br />
     <a href="https://github.com/Lelozitos/F1_Dashboard"><strong>Explore the docs »</strong></a>
     <br />
@@ -34,7 +34,8 @@
     <li>
       <a href="#installation">Installation</a>
     </li>
-    <li><a href="#usage">Usage</a></li>
+    <li><a href="#ai-agent">AI Agent</a></li>
+    <li><a href="#dashboard">Dashboard</a></li>
     <li><a href="#roadmap">Roadmap</a></li>
     <li><a href="#contact">Contact</a></li>
   </ol>
@@ -48,7 +49,7 @@
 
 [![F1 Dashboard v0.8.2](https://img.youtube.com/vi/K-KOvKbXpBs/maxresdefault.jpg)](https://www.youtube.com/watch?v=K-KOvKbXpBs 'F1 Dashboard v0.8.2')
 
-This program is designed to provide comprehensive and interactive visualizations of Formula 1 data. From telemetry analysis to driver and team performance comparisons, it offers users the ability to explore and understand the intricate details of the sport. Whether you’re tracking lap times, analyzing speed differentials, or studying historical race data, this tool delivers an engaging and intuitive experience. Perfect for fans, analysts, and engineers looking to deepen their understanding of F1 dynamics.
+This project's core is a Claude-powered agent that answers F1 questions on demand — results, lap times, standings, pit stops — by calling the same live data sources a human analyst would, instead of guessing from training data. It ships alongside the dashboard that data layer was originally built for: interactive visualizations covering telemetry, driver and team performance, and historical race data, for anyone who wants to explore the numbers directly instead of asking for them.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -56,6 +57,7 @@ This program is designed to provide comprehensive and interactive visualizations
 
 ### Built With
 
+- [![Claude][Claude-img]][Claude.com]
 - [![Streamlit][Streamlit-img]][Streamlit.com]
 - [![FastF1][FastF1-img]][FastF1.com]
 - [![OpenF1][OpenF1-img]][OpenF1.com]
@@ -76,26 +78,46 @@ This program is designed to provide comprehensive and interactive visualizations
 
 1. Install Requirements
 
-   - Open `InstallRequirements.bat` or
-   - Install with pip
+   - For the AI agent:
+     ```sh
+     python -m pip install -r ai_agent/requirements.txt
+     ```
+   - For the dashboard — open `InstallRequirements.bat` or:
      ```sh
      python -m pip install -r requirements.txt
      ```
 
-1. Running the app
-   ```sh
-   python -m streamlit run ./home.py
-   ```
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+<!-- AI AGENT -->
+
+<a name="ai-agent"></a>
+
+## 🤖 AI Agent
+
+```sh
+streamlit run ai_agent/app.py
+```
+
+Chat interface. Ask it about a session, a driver's lap times, a championship standing, a pit stop — Claude picks the right tool (FastF1, Ergast, or OpenF1) and answers from the real data it gets back, citing the round/session/driver the numbers came from. Needs your own `ANTHROPIC_API_KEY` in the environment; each question costs API tokens.
+
+Runs as its own Streamlit app, independent of the dashboard below — you can run either one alone, or both at once on different ports.
+
+Full setup, architecture and the complete list of tools it can call: [`ai_agent/README.md`](ai_agent/README.md).
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-<!-- USAGE -->
+<!-- DASHBOARD -->
 
-<a name="usage"></a>
+<a name="dashboard"></a>
 
-## 🔧 Usage
+## 📊 Dashboard
 
-Once the website is open, you can navigate through diffent tabs in the navigation bar above, which contains (for now)
+```sh
+python -m streamlit run ./home.py
+```
+
+The visualization layer the AI agent's tools are built on top of. Browse it directly through the navigation bar:
 
 - **Session |** See graphs related to a single session in the calendar
 - **Teams &nbsp;&nbsp;|** See teams standings and graphs
@@ -112,6 +134,7 @@ Once the website is open, you can navigate through diffent tabs in the navigatio
 - [x] Add demo
 - [x] Finish Home
 - [x] Finish Contact
+- [x] Add AI Agent with tool use over FastF1/Ergast/OpenF1
 - [ ] Add more Graphs
   - [ ] Session
     - [ ] Light mode compatibility
@@ -162,6 +185,8 @@ Leandro Fabre - [Email](mailto:lm.fabre@hotmail.com)
 
 <!-- MARKDOWN LINKS & IMAGES -->
 
+[Claude-img]: https://img.shields.io/badge/Claude-D97757?style=for-the-badge&logo=anthropic&logoColor=white
+[Claude.com]: https://www.anthropic.com/claude
 [Streamlit-img]: https://img.shields.io/badge/Streamlit-35495E?style=for-the-badge&logo=streamlit&logoColor=4FC08D
 [Streamlit.com]: https://streamlit.io
 [FastF1-img]: https://img.shields.io/badge/FastF1-4A4A55?style=for-the-badge&logo=F1&logoColor=FF3E00
