@@ -1,0 +1,5 @@
+anthropic>=0.70.0
+streamlit==1.45.0
+fastf1==3.8.3
+pandas==2.2.3
+requests==2.32.3
