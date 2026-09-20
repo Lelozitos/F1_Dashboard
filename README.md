@@ -8,7 +8,7 @@
 <h3 align="center">F1 AI Agent</h3>
 
   <p align="center">
-    Ask anything about Formula 1 — Claude looks up the real data before it answers.
+    Ask anything about Formula 1 — Gemini looks up the real data before it answers.
     <br />
     <a href="https://github.com/Lelozitos/F1_Dashboard"><strong>Explore the docs »</strong></a>
     <br />
@@ -57,7 +57,7 @@ This project's core is a Claude-powered agent that answers F1 questions on deman
 
 ### Built With
 
-- [![Claude][Claude-img]][Claude.com]
+- [![Gemini][Gemini-img]][Gemini.com]
 - [![Streamlit][Streamlit-img]][Streamlit.com]
 - [![FastF1][FastF1-img]][FastF1.com]
 - [![OpenF1][OpenF1-img]][OpenF1.com]
@@ -78,14 +78,9 @@ This project's core is a Claude-powered agent that answers F1 questions on deman
 
 1. Install Requirements
 
-   - For the AI agent:
-     ```sh
-     python -m pip install -r ai_agent/requirements.txt
-     ```
-   - For the dashboard — open `InstallRequirements.bat` or:
-     ```sh
-     python -m pip install -r requirements.txt
-     ```
+   ```sh
+   python -m pip install -r requirements.txt
+   ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -96,14 +91,12 @@ This project's core is a Claude-powered agent that answers F1 questions on deman
 ## 🤖 AI Agent
 
 ```sh
-streamlit run ai_agent/app.py
+streamlit run app.py
 ```
 
-Chat interface. Ask it about a session, a driver's lap times, a championship standing, a pit stop — Claude picks the right tool (FastF1, Ergast, or OpenF1) and answers from the real data it gets back, citing the round/session/driver the numbers came from. Needs your own `ANTHROPIC_API_KEY` in the environment; each question costs API tokens.
+One Streamlit app, one port — the **AI** tab and the dashboard tabs below live side by side in the same nav bar.
 
-Runs as its own Streamlit app, independent of the dashboard below — you can run either one alone, or both at once on different ports.
-
-Full setup, architecture and the complete list of tools it can call: [`ai_agent/README.md`](ai_agent/README.md).
+The AI tab is a chat interface. Ask it about a session, a driver's lap times, a championship standing, a pit stop — Gemini picks the right tool (FastF1, Ergast, or OpenF1) and answers from the real data it gets back, citing the round/session/driver the numbers came from. Needs your own `GEMINI_API_KEY` in the environment (a `.env` file at the repo root works — see `.env.example`) — free tier available, no card required. Without a key, the tab still opens but shows a warning instead of a chat; every other tab works normally regardless.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -113,15 +106,13 @@ Full setup, architecture and the complete list of tools it can call: [`ai_agent/
 
 ## 📊 Dashboard
 
-```sh
-python -m streamlit run ./home.py
-```
+Same app (`streamlit run app.py`), no API key required. Browse it directly through the navigation bar:
 
-The visualization layer the AI agent's tools are built on top of. Browse it directly through the navigation bar:
-
-- **Session |** See graphs related to a single session in the calendar
+- **Sessions |** See graphs related to a single session in the calendar
 - **Teams &nbsp;&nbsp;|** See teams standings and graphs
-- **Drivers &nbsp;|** See drivers standings and graphs
+- **Drivers &nbsp;|** See drivers standings, points progression and graphs
+- **Circuits |** Season calendar, lap records, and race winners per track
+- **Predict &nbsp;|** ML-powered win probability predictions
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -185,8 +176,8 @@ Leandro Fabre - [Email](mailto:lm.fabre@hotmail.com)
 
 <!-- MARKDOWN LINKS & IMAGES -->
 
-[Claude-img]: https://img.shields.io/badge/Claude-D97757?style=for-the-badge&logo=anthropic&logoColor=white
-[Claude.com]: https://www.anthropic.com/claude
+[Gemini-img]: https://img.shields.io/badge/Gemini-8E75B2?style=for-the-badge&logo=googlegemini&logoColor=white
+[Gemini.com]: https://ai.google.dev
 [Streamlit-img]: https://img.shields.io/badge/Streamlit-35495E?style=for-the-badge&logo=streamlit&logoColor=4FC08D
 [Streamlit.com]: https://streamlit.io
 [FastF1-img]: https://img.shields.io/badge/FastF1-4A4A55?style=for-the-badge&logo=F1&logoColor=FF3E00
