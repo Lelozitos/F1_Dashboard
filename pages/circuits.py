@@ -1,5 +1,5 @@
 import streamlit as st
-from home import nav_bar, credits
+from app import nav_bar, credits
 from graphs.colors import CIRCUIT_CHARS
 
 import fastf1
@@ -10,32 +10,33 @@ import plotly.express as px
 import datetime
 
 
-# TODO Change it in the future for real time data
-CIRCUIT_INFO = {
-    "Bahrain":          (57, 5.412, "1:31.447", "Pedro de la Rosa",   2005),
-    "Saudi Arabian":    (50, 6.174, "1:30.734", "Lewis Hamilton",      2021),
-    "Australian":       (58, 5.278, "1:19.813", "Charles Leclerc",     2022),
-    "Japanese":         (53, 5.807, "1:30.983", "Lewis Hamilton",      2019),
-    "Chinese":          (56, 5.451, "1:32.238", "Michael Schumacher",  2004),
-    "Miami":            (57, 5.412, "1:29.708", "Max Verstappen",      2023),
-    "Monaco":           (78, 3.337, "1:12.909", "Rubens Barrichello",  2004),
-    "Spanish":          (66, 4.675, "1:18.149", "Max Verstappen",      2021),
-    "Barcelona":        (66, 4.675, "1:18.149", "Max Verstappen",      2021),
-    "Canadian":         (70, 4.361, "1:13.078", "Valtteri Bottas",     2019),
-    "Austrian":         (71, 4.318, "1:05.619", "Carlos Sainz",        2020),
-    "British":          (52, 5.891, "1:27.097", "Max Verstappen",      2020),
-    "Hungarian":        (70, 4.381, "1:16.627", "Lewis Hamilton",      2020),
-    "Belgian":          (44, 7.004, "1:46.286", "Valtteri Bottas",     2018),
-    "Dutch":            (72, 4.259, "1:11.097", "Lewis Hamilton",      2021),
-    "Italian":          (53, 5.793, "1:21.046", "Rubens Barrichello",  2004),
-    "Azerbaijan":       (51, 6.003, "1:43.009", "Charles Leclerc",     2019),
-    "Singapore":        (61, 5.063, "1:35.867", "Kevin Magnussen",     2018),
-    "United States":    (56, 5.513, "1:36.169", "Charles Leclerc",     2019),
-    "Mexico City":      (71, 4.304, "1:17.774", "Valtteri Bottas",     2021),
-    "São Paulo":        (71, 4.309, "1:10.540", "Valtteri Bottas",     2018),
-    "Las Vegas":        (50, 6.201, "1:35.490", "Max Verstappen",      2023),
-    "Qatar":            (57, 5.380, "1:24.319", "Max Verstappen",      2023),
-    "Abu Dhabi":        (58, 5.281, "1:26.103", "Max Verstappen",      2021),
+# Static laps/distance (track geometry barely changes) — lap records are fetched
+# live from Ergast in get_circuit_record() below, so they never go stale.
+CIRCUIT_LAYOUT = {
+    "Bahrain":          (57, 5.412),
+    "Saudi Arabian":    (50, 6.174),
+    "Australian":       (58, 5.278),
+    "Japanese":         (53, 5.807),
+    "Chinese":          (56, 5.451),
+    "Miami":            (57, 5.412),
+    "Monaco":           (78, 3.337),
+    "Spanish":          (66, 4.675),
+    "Barcelona":        (66, 4.675),
+    "Canadian":         (70, 4.361),
+    "Austrian":         (71, 4.318),
+    "British":          (52, 5.891),
+    "Hungarian":        (70, 4.381),
+    "Belgian":          (44, 7.004),
+    "Dutch":            (72, 4.259),
+    "Italian":          (53, 5.793),
+    "Azerbaijan":       (51, 6.003),
+    "Singapore":        (61, 5.063),
+    "United States":    (56, 5.513),
+    "Mexico City":      (71, 4.304),
+    "São Paulo":        (71, 4.309),
+    "Las Vegas":        (50, 6.201),
+    "Qatar":            (57, 5.380),
+    "Abu Dhabi":        (58, 5.281),
 }
 
 
@@ -110,6 +111,40 @@ def get_circuit_history(event_name):
     return pd.DataFrame(rows)
 
 
+@st.cache_data(ttl=3600 * 24)
+def get_circuit_record(event_name):
+    """Fastest official race lap ever set at this circuit, scanned live from Ergast
+    across every season on record (2018–present) so new records surface automatically."""
+    ergast = Ergast()
+    keyword = event_name.replace(" Grand Prix", "").strip()
+    best = None  # (LapTime as pd.Timedelta, driver name, year)
+    for year in range(datetime.date.today().year, 2018 - 1, -1):
+        try:
+            schedule = fastf1.get_event_schedule(year).query("EventFormat != 'testing'")
+            match = schedule[schedule["EventName"].str.contains(keyword, case=False, na=False)]
+            if match.empty:
+                continue
+            rnd = int(match.iloc[0]["RoundNumber"])
+            result = ergast.get_race_results(season=year, round=rnd)
+            if not result.content:
+                continue
+            df = result.content[0].dropna(subset=["fastestLapTime"])
+            if df.empty:
+                continue
+            row = df.loc[df["fastestLapTime"].idxmin()]
+            lap_time = row["fastestLapTime"]
+            if best is None or lap_time < best[0]:
+                best = (lap_time, f"{row['givenName']} {row['familyName']}", year)
+        except Exception:
+            continue
+    if best is None:
+        return None
+    lap_time, driver, year = best
+    total_seconds = lap_time.total_seconds()
+    m, s = divmod(total_seconds, 60)
+    return {"time": f"{int(m)}:{s:06.3f}", "driver": driver, "year": year}
+
+
 def _meters_html(speed: int, downforce: int, braking: int, overtaking: int) -> str:
     metrics = [("Speed", speed), ("Downforce", downforce), ("Braking", braking), ("Overtaking", overtaking)]
 
@@ -133,17 +168,19 @@ def _meters_html(speed: int, downforce: int, braking: int, overtaking: int) -> s
 def _circuit_card(col, event, show_record=True):
     short = event["EventName"].replace(" Grand Prix", "")
     flag = COUNTRY_FLAGS.get(event["Country"], "🏁")
-    info = CIRCUIT_INFO.get(short)
+    layout = CIRCUIT_LAYOUT.get(short)
     chars = CIRCUIT_CHARS.get(short)
     with col.container(border=True):
         st.markdown(f"#### R{int(event['RoundNumber'])} {flag} {short}")
         st.caption(f"📍 {event['Location']}, {event['Country']}")
         st.caption(f"📅 {pd.Timestamp(event['EventDate']).strftime('%d %b %Y')}")
-        if show_record and info:
+        if show_record and layout:
             c1, c2 = st.columns(2)
-            c1.metric("Laps", info[0])
-            c2.metric("Dist.", f"{info[1]} km")
-            st.caption(f"⏱ Record: **{info[2]}** — {info[3]} ({info[4]})")
+            c1.metric("Laps", layout[0])
+            c2.metric("Dist.", f"{layout[1]} km")
+            record = get_circuit_record(event["EventName"])
+            if record:
+                st.caption(f"⏱ Record: **{record['time']}** — {record['driver']} ({record['year']})")
         if chars:
             st.markdown(_meters_html(*chars), unsafe_allow_html=True)
 
@@ -207,17 +244,20 @@ def tab_history(schedule):
     selected = st.selectbox("Select Circuit", event_names, format_func=lambda x: x.replace(" Grand Prix", ""))
 
     short = selected.replace(" Grand Prix", "")
-    info = CIRCUIT_INFO.get(short)
+    layout = CIRCUIT_LAYOUT.get(short)
     chars = CIRCUIT_CHARS.get(short)
-    if info:
+    with st.spinner("Loading lap record..."):
+        record = get_circuit_record(selected)
+    if layout:
         c1, c2, c3 = st.columns(3)
-        c1.metric("Laps per Race", info[0])
-        c2.metric("Circuit Length", f"{info[1]} km")
-        c3.metric("Lap Record", info[2])
-        st.caption(f"Record held by **{info[3]}** ({info[4]})")
+        c1.metric("Laps per Race", layout[0])
+        c2.metric("Circuit Length", f"{layout[1]} km")
+        c3.metric("Lap Record", record["time"] if record else "—")
+        if record:
+            st.caption(f"Record held by **{record['driver']}** ({record['year']})")
     if chars:
         st.markdown(_meters_html(*chars), unsafe_allow_html=True)
-    if info or chars:
+    if layout or chars:
         st.divider()
 
     with st.spinner("Loading circuit history (2018–present)..."):

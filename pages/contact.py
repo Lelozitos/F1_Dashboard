@@ -1,5 +1,5 @@
 import streamlit as st
-from home import nav_bar
+from app import nav_bar
 
 _SOCIALS_HTML = """
 <div style="display:flex; gap:24px; justify-content:center; margin:8px 0 24px 0;">

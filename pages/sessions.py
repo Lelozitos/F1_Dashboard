@@ -1,5 +1,5 @@
 import streamlit as st
-from home import nav_bar, credits
+from app import nav_bar, credits
 
 from graphs.graphs_session import *
 import fastf1
@@ -110,7 +110,11 @@ def load_graphs(session):
                 st.rerun()
         else:
             with st.spinner("Loading Animated Track Map..."):
-                st.plotly_chart(graph_drivers_curves(session))
+                track_map_fig = graph_drivers_curves(session)
+                if track_map_fig is None:
+                    st.info("Circuit info unavailable for this session — track map skipped.")
+                else:
+                    st.plotly_chart(track_map_fig)
 
     if session.session_info["Type"] == "Race":
         cols = st.columns([2,2,1])

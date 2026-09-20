@@ -3,12 +3,12 @@
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
-  <a align="center" href="https://github.com/Lelozitos/F1_Dashboard" style="font-size:100px"> 🏎 </a>
+  <a align="center" href="https://github.com/Lelozitos/F1_Dashboard" style="font-size:100px"> 🏎️🤖 </a>
 
-<h3 align="center">F1 Dashboard</h3>
+<h3 align="center">F1 AI Agent</h3>
 
   <p align="center">
-    Unleashing the power of data-driven insights for Formula 1 enthusiasts.
+    Ask anything about Formula 1 — Gemini looks up the real data before it answers.
     <br />
     <a href="https://github.com/Lelozitos/F1_Dashboard"><strong>Explore the docs »</strong></a>
     <br />
@@ -34,7 +34,8 @@
     <li>
       <a href="#installation">Installation</a>
     </li>
-    <li><a href="#usage">Usage</a></li>
+    <li><a href="#ai-agent">AI Agent</a></li>
+    <li><a href="#dashboard">Dashboard</a></li>
     <li><a href="#roadmap">Roadmap</a></li>
     <li><a href="#contact">Contact</a></li>
   </ol>
@@ -48,7 +49,7 @@
 
 [![F1 Dashboard v0.8.2](https://img.youtube.com/vi/K-KOvKbXpBs/maxresdefault.jpg)](https://www.youtube.com/watch?v=K-KOvKbXpBs 'F1 Dashboard v0.8.2')
 
-This program is designed to provide comprehensive and interactive visualizations of Formula 1 data. From telemetry analysis to driver and team performance comparisons, it offers users the ability to explore and understand the intricate details of the sport. Whether you’re tracking lap times, analyzing speed differentials, or studying historical race data, this tool delivers an engaging and intuitive experience. Perfect for fans, analysts, and engineers looking to deepen their understanding of F1 dynamics.
+This project's core is a Claude-powered agent that answers F1 questions on demand — results, lap times, standings, pit stops — by calling the same live data sources a human analyst would, instead of guessing from training data. It ships alongside the dashboard that data layer was originally built for: interactive visualizations covering telemetry, driver and team performance, and historical race data, for anyone who wants to explore the numbers directly instead of asking for them.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -56,6 +57,7 @@ This program is designed to provide comprehensive and interactive visualizations
 
 ### Built With
 
+- [![Gemini][Gemini-img]][Gemini.com]
 - [![Streamlit][Streamlit-img]][Streamlit.com]
 - [![FastF1][FastF1-img]][FastF1.com]
 - [![OpenF1][OpenF1-img]][OpenF1.com]
@@ -76,30 +78,41 @@ This program is designed to provide comprehensive and interactive visualizations
 
 1. Install Requirements
 
-   - Open `InstallRequirements.bat` or
-   - Install with pip
-     ```sh
-     python -m pip install -r requirements.txt
-     ```
-
-1. Running the app
    ```sh
-   python -m streamlit run ./home.py
+   python -m pip install -r requirements.txt
    ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-<!-- USAGE -->
+<!-- AI AGENT -->
 
-<a name="usage"></a>
+<a name="ai-agent"></a>
 
-## 🔧 Usage
+## 🤖 AI Agent
 
-Once the website is open, you can navigate through diffent tabs in the navigation bar above, which contains (for now)
+```sh
+streamlit run app.py
+```
 
-- **Session |** See graphs related to a single session in the calendar
+One Streamlit app, one port — the **AI** tab and the dashboard tabs below live side by side in the same nav bar.
+
+The AI tab is a chat interface. Ask it about a session, a driver's lap times, a championship standing, a pit stop — Gemini picks the right tool (FastF1, Ergast, or OpenF1) and answers from the real data it gets back, citing the round/session/driver the numbers came from. Needs your own `GEMINI_API_KEY` in the environment (a `.env` file at the repo root works — see `.env.example`) — free tier available, no card required. Without a key, the tab still opens but shows a warning instead of a chat; every other tab works normally regardless.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+<!-- DASHBOARD -->
+
+<a name="dashboard"></a>
+
+## 📊 Dashboard
+
+Same app (`streamlit run app.py`), no API key required. Browse it directly through the navigation bar:
+
+- **Sessions |** See graphs related to a single session in the calendar
 - **Teams &nbsp;&nbsp;|** See teams standings and graphs
-- **Drivers &nbsp;|** See drivers standings and graphs
+- **Drivers &nbsp;|** See drivers standings, points progression and graphs
+- **Circuits |** Season calendar, lap records, and race winners per track
+- **Predict &nbsp;|** ML-powered win probability predictions
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -112,6 +125,7 @@ Once the website is open, you can navigate through diffent tabs in the navigatio
 - [x] Add demo
 - [x] Finish Home
 - [x] Finish Contact
+- [x] Add AI Agent with tool use over FastF1/Ergast/OpenF1
 - [ ] Add more Graphs
   - [ ] Session
     - [ ] Light mode compatibility
@@ -162,6 +176,8 @@ Leandro Fabre - [Email](mailto:lm.fabre@hotmail.com)
 
 <!-- MARKDOWN LINKS & IMAGES -->
 
+[Gemini-img]: https://img.shields.io/badge/Gemini-8E75B2?style=for-the-badge&logo=googlegemini&logoColor=white
+[Gemini.com]: https://ai.google.dev
 [Streamlit-img]: https://img.shields.io/badge/Streamlit-35495E?style=for-the-badge&logo=streamlit&logoColor=4FC08D
 [Streamlit.com]: https://streamlit.io
 [FastF1-img]: https://img.shields.io/badge/FastF1-4A4A55?style=for-the-badge&logo=F1&logoColor=FF3E00

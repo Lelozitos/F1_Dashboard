@@ -10,6 +10,9 @@ import fastf1.plotting
 import fastf1
 import requests
 from .colors import get_team_color_safe, get_driver_color_safe, get_compound_mapping_safe, get_driver_line_dash_map, get_driver_pattern_map, get_driver_symbol_map
+from .theme import register_theme
+
+register_theme()
 
 
 def _hires_headshot(url):
@@ -269,7 +272,62 @@ def graph_drivers_fastest_laps_time(session):
     return fig
 
 
-def graph_drivers_consistency(session, show_fuel_adj=True): # TODO add safety car periods and yellow flags (Open F1)
+_FLAG_STATUS_META = {
+    "2": ("Yellow Flag", "#F5C518", 0.15),
+    "4": ("Safety Car", "#F5C518", 0.30),
+    "5": ("Red Flag", "#E8002D", 0.22),
+    "6": ("Virtual Safety Car", "#F5A623", 0.22),
+    "7": ("VSC Ending", "#F5A623", 0.12),
+}
+
+
+def _flag_periods_by_lap(session):
+    """Return (start_lap, end_lap, label, color, opacity) for each yellow/SC/VSC/red period,
+    using session.track_status (Time-indexed) mapped onto lap numbers via each lap's start time."""
+    try:
+        track_status = session.track_status
+        laps = session.laps
+        if track_status is None or track_status.empty or laps is None or laps.empty:
+            return []
+    except Exception:
+        return []
+
+    lap_starts = laps[["LapNumber", "LapStartTime"]].dropna().sort_values("LapStartTime")
+    if lap_starts.empty:
+        return []
+
+    def time_to_lap(t):
+        idx = lap_starts["LapStartTime"].searchsorted(t, side="right") - 1
+        idx = max(0, min(idx, len(lap_starts) - 1))
+        return int(lap_starts.iloc[idx]["LapNumber"])
+
+    ts = track_status.sort_values("Time").reset_index(drop=True)
+    session_end = laps["LapStartTime"].max()
+
+    periods = []
+    active_status, active_start = None, None
+    for _, row in ts.iterrows():
+        status = str(row["Status"])
+        if status in _FLAG_STATUS_META:
+            if active_status is None:
+                active_status, active_start = status, row["Time"]
+        elif active_status is not None:
+            periods.append((active_status, active_start, row["Time"]))
+            active_status, active_start = None, None
+    if active_status is not None:
+        periods.append((active_status, active_start, session_end))
+
+    result = []
+    for status, t0, t1 in periods:
+        lap0, lap1 = time_to_lap(t0), time_to_lap(t1)
+        if lap1 < lap0:
+            lap1 = lap0
+        label, color, opacity = _FLAG_STATUS_META[status]
+        result.append((lap0, lap1, label, color, opacity))
+    return result
+
+
+def graph_drivers_consistency(session, show_fuel_adj=True):
     laps = session.laps.pick_quicklaps() # Remove pit lanes -> this causes graph to start later, due to too much inconsistency in the beginning
     transformed_laps = laps.copy()
     transformed_laps["LapTime (s)"] = transformed_laps["LapTime"].dt.total_seconds()
@@ -341,6 +399,19 @@ def graph_drivers_consistency(session, show_fuel_adj=True): # TODO add safety ca
         xaxis = {"title": "Lap №"},
         yaxis = {"title": f"{y_col}"},
     )
+
+    seen_labels = set()
+    for lap0, lap1, label, color, opacity in _flag_periods_by_lap(session):
+        vrect_kwargs = dict(
+            x0=lap0 - 0.5, x1=lap1 + 0.5,
+            fillcolor=color, opacity=opacity, line_width=0, layer="below",
+        )
+        if label not in seen_labels:
+            vrect_kwargs.update(
+                annotation_text=label, annotation_position="top left", annotation_font_size=9,
+            )
+            seen_labels.add(label)
+        fig.add_vrect(**vrect_kwargs)
 
     fig.update_traces(
         marker=dict(
@@ -588,49 +659,85 @@ def graph_overall_tyre(session):
     return fig
 
 
-def graph_drivers_top_speed(session): # TODO add 5 or 10 top speeds
-    top_speeds = []
-       
+def graph_drivers_top_speed(session, top_n=5):
+    records = []
+
     for driver in session.drivers:
         try:
-            telemetry = session.laps.pick_drivers([driver]).get_car_data()
-            if telemetry.empty: continue
-            telemetry["Driver"] = session.get_driver(driver)["Abbreviation"]
-            top_speeds.append(telemetry.iloc[telemetry["Speed"].idxmax()])
-        except: pass
+            abbr = session.get_driver(driver)["Abbreviation"]
+            driver_laps = session.laps.pick_drivers([driver])
+            per_lap_top = []
+            for _, lap in driver_laps.iterlaps():
+                car_data = lap.get_car_data()
+                if car_data.empty:
+                    continue
+                row = car_data.loc[car_data["Speed"].idxmax()]
+                per_lap_top.append({
+                    "Driver": abbr,
+                    "Speed": row["Speed"],
+                    "LapNumber": lap["LapNumber"],
+                    "Compound": lap["Compound"],
+                    "Stint": lap["Stint"],
+                })
+            if not per_lap_top:
+                continue
+            driver_df = pd.DataFrame(per_lap_top).sort_values("Speed", ascending=False).head(top_n)
+            records.append(driver_df)
+        except Exception:
+            pass
 
-    top_speeds = pd.DataFrame(top_speeds)
-    top_speeds = top_speeds.sort_values(by="Speed", ascending=False).reset_index(drop=True)
+    if not records:
+        return None
 
-    colors = []
-    for driver in top_speeds["Driver"]:
-        colors.append(get_driver_color_safe(driver, session))
+    top_speeds = pd.concat(records, ignore_index=True)
+    top_speeds["Compound"] = top_speeds["Compound"].astype(str).str.capitalize()
+    top_speeds["Rank"] = top_speeds.groupby("Driver")["Speed"].rank(ascending=False, method="first").astype(int)
 
-    fig = px.bar(
+    best_per_driver = top_speeds.groupby("Driver")["Speed"].max().sort_values(ascending=False)
+    driver_order = best_per_driver.index.tolist()
+    color_map = {driver: get_driver_color_safe(driver, session) for driver in driver_order}
+
+    # Median of each driver's best lap — robust to a single outlier lap (e.g. a driver
+    # who only completed an out-lap) skewing a plain mean.
+    median_best = best_per_driver.median()
+
+    fig = px.strip(
         top_speeds,
         x="Driver",
         y="Speed",
         color="Driver",
-        color_discrete_sequence=colors,
-        pattern_shape="Driver",
-        pattern_shape_map=get_driver_pattern_map(session),
-        hover_data=["Speed"], # TODO add "LapNumber", "Compound", "Stint"
-        text_auto=True,
-        )
-
-    fig.add_hline(y=top_speeds["Speed"].mean(), line_dash="dot", line_color="gray", annotation_text="Average", annotation_position="bottom right") # TODO remove outliers, if a driver has no top speed, messes up the average
-
-    fig.update_layout(
-        title={"text": "Top Speed", "font": {"size": 30, "family":"Arial"}, "automargin": True, "xanchor": "center", "x": .5, "yanchor": "top", "y": .9},
-        xaxis = {"title": "Driver"},
-        yaxis = {"title": "Speed (km/h)"},
-        yaxis_range = [top_speeds["Speed"].min() - 5, top_speeds["Speed"].max() + 5],
-        showlegend=False    
+        color_discrete_map=color_map,
+        category_orders={"Driver": driver_order},
+        hover_data=["LapNumber", "Compound", "Stint", "Rank"],
     )
 
-    fig.update_traces(
-        marker={"line": {"color": "gray", "width": 1}, "pattern_fillmode": "overlay"},
-        textfont={"family": "Arial", "size": 12, "color": "#F1F1F3", "shadow": "1px 1px 2px black"},
+    fig.update_traces(marker=dict(size=9, line=dict(width=1, color="black"), opacity=0.85), jitter=0.35)
+
+    # Diamond marker highlighting each driver's single fastest speed
+    fig.add_trace(go.Scatter(
+        x=best_per_driver.index,
+        y=best_per_driver.values,
+        mode="markers",
+        marker=dict(symbol="diamond", size=13, color=[color_map[d] for d in best_per_driver.index],
+                    line=dict(width=1.5, color="black")),
+        name="Best lap",
+        hovertemplate="<b>%{x}</b><br>Top speed: %{y:.1f} km/h<extra></extra>",
+        showlegend=False,
+    ))
+
+    fig.add_hline(
+        y=median_best,
+        line_dash="dot", line_color="gray",
+        annotation_text=f"Median best: {median_best:.1f} km/h",
+        annotation_position="bottom right",
+    )
+
+    fig.update_layout(
+        title={"text": f"Top Speed — best {top_n} laps per driver", "font": {"size": 30, "family": "Arial"},
+               "automargin": True, "xanchor": "center", "x": .5, "yanchor": "top", "y": .9},
+        xaxis={"title": "Driver", "categoryorder": "array", "categoryarray": driver_order},
+        yaxis={"title": "Speed (km/h)", "range": [top_speeds["Speed"].min() - 5, top_speeds["Speed"].max() + 5]},
+        showlegend=False,
     )
 
     return fig
@@ -745,7 +852,12 @@ def graph_drivers_start(session):
     first_lap = session.laps.pick_laps([1])
     for driver in session.drivers:
         try: # If driver has no laps, it will give an error
-            telemetry = first_lap.pick_drivers([driver]).get_car_data().add_distance().fill_missing() # TODO increase frequency
+            telemetry = (
+                first_lap.pick_drivers([driver]).get_car_data()
+                .add_distance()
+                .fill_missing()
+                .resample_channels(rule="20ms")  # up-sample from the raw ~200ms cadence for a smoother start trace
+            )
             telemetry["Driver"] = session.get_driver(driver)["Abbreviation"]
             telemetries.append(telemetry)
         except: pass
@@ -760,7 +872,10 @@ def graph_drivers_start(session):
     telemetries.reset_index(drop=True, inplace=True)
     
     # Safety check for empty slice or if no points are past the first corner
-    corners = session.get_circuit_info().corners
+    try:
+        corners = session.get_circuit_info().corners
+    except Exception:
+        corners = pd.DataFrame()
     if not corners.empty:
         past_corner = telemetries[telemetries['Distance'] > corners.iloc[0]["Distance"]]
         if not past_corner.empty:
@@ -884,7 +999,10 @@ def graph_teams_pitstop(session):
 
 def graph_drivers_curves(session):
     # Retrieve track info and determine rotation
-    circuit_info = session.get_circuit_info()
+    try:
+        circuit_info = session.get_circuit_info()
+    except Exception:
+        return None
     track_angle = circuit_info.rotation / 180 * np.pi
 
     def rotate(xy, angle):
@@ -1276,7 +1394,11 @@ def graph_engine_clipping(session):
                 # )
 
     # Add curves distances (vertical lines marking the corners)
-    for curve in session.get_circuit_info().corners.iterrows():
+    try:
+        corners = session.get_circuit_info().corners
+    except Exception:
+        corners = pd.DataFrame()
+    for curve in corners.iterrows():
         curve = curve[1]
         fig.add_vline(x=curve["Distance"], line_dash="dot", line_color="gray", annotation_text=curve["Number"], annotation_position="bottom right", row="all", col=1)
 
@@ -1530,41 +1652,36 @@ def graph_weather(session):
         legend_title="Variables",
     )
     
-    # TODO if it stops raining and starts again, it will fail
-    rains = weather_data[weather_data["Rainfall"] == True]
-
     if raining:
-        fig.update_layout(
-            shapes=[
-                dict(
-                    type="rect",
-                    xref="x",
-                    yref="paper",
-                    x0=rains.iloc[0]["CurrentLap"],
-                    x1=rains.iloc[-1]["CurrentLap"],
-                    y0=0,
-                    y1=1,
-                    fillcolor="LightBlue",
-                    opacity=0.5,
-                    layer="below",
-                    line_width=0
-                )
-            ],
-            annotations=[
-                dict(
-                    x=(rains.iloc[0]["CurrentLap"] + rains.iloc[-1]["CurrentLap"])/2,
-                    y=1.05, 
-                    xref="x",
-                    yref="paper",
-                    text="Rain Interval",
-                    showarrow=False,
-                    font=dict(size=12, color="blue"),
-                    align="center",
-                    bgcolor="LightBlue",
-                    borderwidth=1
-                )
-            ]
-        )
+        weather_data = weather_data.sort_values("CurrentLap").reset_index(drop=True)
+        rain_flag = weather_data["Rainfall"].astype(bool)
+        # Group consecutive True rows into separate rain segments, so a lap-30
+        # shower followed by a dry spell and a lap-45 shower draw as two rects.
+        segment_id = (rain_flag != rain_flag.shift()).cumsum()
+        rain_segments = [
+            group for _, group in weather_data.groupby(segment_id)
+            if rain_flag.loc[group.index[0]]
+        ]
+
+        shapes, annotations = [], []
+        for i, segment in enumerate(rain_segments, start=1):
+            x0, x1 = segment.iloc[0]["CurrentLap"], segment.iloc[-1]["CurrentLap"]
+            if x0 == x1:
+                x1 = x0 + 0.5
+            shapes.append(dict(
+                type="rect", xref="x", yref="paper",
+                x0=x0, x1=x1, y0=0, y1=1,
+                fillcolor="LightBlue", opacity=0.5, layer="below", line_width=0,
+            ))
+            label = "Rain Interval" if len(rain_segments) == 1 else f"Rain #{i}"
+            annotations.append(dict(
+                x=(x0 + x1) / 2, y=1.05, xref="x", yref="paper",
+                text=label, showarrow=False,
+                font=dict(size=12, color="blue"), align="center",
+                bgcolor="LightBlue", borderwidth=1,
+            ))
+
+        fig.update_layout(shapes=shapes, annotations=annotations)
 
     return fig
 
