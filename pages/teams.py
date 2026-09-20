@@ -1,5 +1,5 @@
 import streamlit as st
-from home import nav_bar, credits
+from app import nav_bar, credits
 
 import fastf1
 from fastf1.ergast import Ergast
@@ -88,10 +88,15 @@ def load_standings(standings, year):
                     except Exception:
                         st.caption("🚗 Car image unavailable")
                 with img_c2:
-                    try:
-                        st.image(_logo_url(year, slug), use_container_width=True)
-                    except Exception:
-                        st.caption("🏷 Logo unavailable")
+                    # The F1 media asset is a white-on-transparent logo — on the
+                    # app's white background it's invisible, so give it a chip in
+                    # the team's own accent color (matches the card's border-left).
+                    st.markdown(
+                        f"<div style='background:{color}; border-radius:8px; padding:14px; "
+                        f"display:flex; align-items:center; justify-content:center; height:100%;'>"
+                        f"<img src='{_logo_url(year, slug)}' style='max-width:100%; max-height:60px;' /></div>",
+                        unsafe_allow_html=True,
+                    )
 
 
 @st.cache_data(persist=True)

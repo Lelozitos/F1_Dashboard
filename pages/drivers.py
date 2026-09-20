@@ -1,5 +1,5 @@
 import streamlit as st
-from home import nav_bar, credits
+from app import nav_bar, credits
 
 import fastf1
 from fastf1.ergast import Ergast
@@ -136,7 +136,7 @@ def load_points_data(year, round_num):
     return pivot
 
 
-def load_graphs(year, round_num):
+def load_graphs(year, round_num, standings):
     with st.spinner("Loading points data..."):
         try:
             results = load_points_data(year, round_num)
@@ -147,6 +147,38 @@ def load_graphs(year, round_num):
     if results is None or results.empty:
         st.info("No points data available.")
         return
+
+    # ── Points progression line chart, colored by team ─────────────────────
+    team_map = {
+        row["driverCode"]: (row["constructorNames"][0] if row["constructorNames"] else "")
+        for _, row in standings.iterrows()
+    }
+    race_order = list(results.columns)
+    cumulative = results.fillna(0).cumsum(axis=1)
+    cum_long = cumulative.reset_index().melt(
+        id_vars="driverCode", var_name="Race", value_name="Points"
+    )
+    cum_long["Team"] = cum_long["driverCode"].map(team_map).fillna("")
+    color_map = {t: _team_color(t) for t in cum_long["Team"].unique()}
+
+    fig_line = px.line(
+        cum_long, x="Race", y="Points",
+        color="Team", line_group="driverCode",
+        markers=True, color_discrete_map=color_map,
+        custom_data=["driverCode"],
+        title=f"{year} — Driver Points Progression",
+        labels={"Race": "", "Points": "Cumulative Points"},
+    )
+    fig_line.update_traces(
+        hovertemplate="<b>%{customdata[0]}</b><br>%{x}<br>Points: %{y}<extra></extra>",
+    )
+    fig_line.update_xaxes(categoryorder="array", categoryarray=race_order)
+    fig_line.update_layout(
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+        title_font_size=20, margin=dict(l=0, r=0, t=50, b=0),
+        legend_title_text="Team",
+    )
+    st.plotly_chart(fig_line, use_container_width=True)
 
     # ── Total points bar chart ────────────────────────────────────────────
     totals = results.sum(axis=1).reset_index()
@@ -225,7 +257,7 @@ def main():
     with tabs[0]:
         load_standings(standings, year, round_num)
     with tabs[1]:
-        load_graphs(year, round_num)
+        load_graphs(year, round_num, standings)
 
 
 main()

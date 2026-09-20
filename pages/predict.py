@@ -9,7 +9,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.metrics import roc_auc_score, brier_score_loss
 import plotly.graph_objects as go
-from home import nav_bar, credits
+from app import nav_bar, credits
 from graphs.colors import TEAM_COLORS, CIRCUIT_CHARS, CONSTRUCTOR_CHARS
 
 CURRENT_YEAR = pd.Timestamp.now().year
@@ -56,6 +56,28 @@ FEATURE_LABELS = [
 ]
 
 _DEFAULT_CHARS = (3, 3, 3, 3)
+
+
+def _fetch_full_season_results(ergast: Ergast, year: int, max_pages: int = 20):
+    """ergast.get_race_results(season=year) is paginated by the API (100 rows/page)
+    and only returns the first page unless you follow .get_next_result_page() —
+    for a full season that silently drops most races (e.g. only 2 of 13 on a
+    23-round calendar), starving both training data and current-season form.
+    Returns a flat list of per-race DataFrames covering the whole season."""
+    try:
+        page = ergast.get_race_results(season=year, limit=100)
+    except Exception:
+        return []
+    all_content = list(page.content)
+    pages_fetched = 1
+    while not page.is_complete and pages_fetched < max_pages:
+        try:
+            page = page.get_next_result_page()
+        except Exception:
+            break
+        all_content.extend(page.content)
+        pages_fetched += 1
+    return all_content
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -202,11 +224,8 @@ def build_training_data(start_year: int, end_year: int) -> pd.DataFrame:
     rows = []
 
     for year in range(start_year, end_year + 1):
-        try:
-            season = ergast.get_race_results(season=year)
-        except Exception:
-            continue
-        if not season or not season.content:
+        season_content = _fetch_full_season_results(ergast, year)
+        if not season_content:
             continue
 
         try:
@@ -218,7 +237,7 @@ def build_training_data(start_year: int, end_year: int) -> pd.DataFrame:
             circuit_names = []
             chars_by_round = []
 
-        total_rounds = max(len(season.content), 1)
+        total_rounds = max(len(season_content), 1)
         d_pts: dict = {}
         c_pts: dict = {}
         d_recent: dict = {}        # driver -> last-10 finish positions
@@ -227,7 +246,7 @@ def build_training_data(start_year: int, end_year: int) -> pd.DataFrame:
         d_circ_hist: dict = {}     # (driver, circuit) -> [positions]
         c_recent: dict = {}        # constructor -> last-6 finish positions
 
-        for round_idx, race_df in enumerate(season.content):
+        for round_idx, race_df in enumerate(season_content):
             if race_df is None or race_df.empty:
                 continue
 
@@ -447,9 +466,9 @@ def get_standings_and_form(year: int, round_num: int):
         pass
 
     try:
-        season = ergast.get_race_results(season=year)
-        if season and season.content:
-            for race_idx, race_df in enumerate(season.content[:prev]):
+        season_content = _fetch_full_season_results(ergast, year)
+        if season_content:
+            for race_idx, race_df in enumerate(season_content[:prev]):
                 if race_df is None or race_df.empty:
                     continue
                 drv_col = _find_col(race_df, ['driverCode', 'Driver.driverCode'])
@@ -724,9 +743,13 @@ def show_predictions(pred_df, event_name, has_quali, circuit_hist_multi=None):
 
     pred_df = pred_df.sort_values('win_probability', ascending=False).reset_index(drop=True)
 
-    # Top-3 podium cards
-    c1, c2, c3 = st.columns(3)
+    # Top-3 podium cards — same visual language as the home page feature cards
+    # (accent-colored top border, hover lift from the shared CSS).
+    c1, c2, c3 = st.columns(3, gap="medium")
     medals = ["🥇", "🥈", "🥉"]
+    podium_bg = ["linear-gradient(135deg,#FFF9E0 0%,#FFFFFF 100%)",
+                 "linear-gradient(135deg,#F3F3F6 0%,#FFFFFF 100%)",
+                 "linear-gradient(135deg,#FBE9DA 0%,#FFFFFF 100%)"]
     for i, col in enumerate([c1, c2, c3]):
         if i >= len(pred_df):
             break
@@ -737,24 +760,38 @@ def show_predictions(pred_df, event_name, has_quali, circuit_hist_multi=None):
         arrow_color = _form_color(delta)
         circ_hist_list = _extract_positions((circuit_hist_multi or {}).get(r['driver'], []))
         circ_info = f"Best here (last 6y): P{int(min(circ_hist_list))}, avg P{np.mean(circ_hist_list):.1f}" if circ_hist_list else "No prior history at this circuit"
-        pod_pct = r.get('podium_probability', r['win_probability'] * 3)
+        pod_pct = min(float(r.get('podium_probability', r['win_probability'])), 1.0)
+        win_pct = float(r['win_probability'])
 
         with col:
             st.markdown(f"""
-                <div style="border-left:5px solid {color}; background:#f8f4ff; padding:14px 18px;
-                            border-radius:8px; margin-bottom:8px;">
-                  <div style="font-size:1.4rem; font-weight:800;">{medals[i]} {r['driver']}</div>
-                  <div style="color:#555; font-size:0.88rem; margin-bottom:6px;">{r['constructor']}</div>
-                  <div style="font-size:1.2rem; color:#6C3DE8; font-weight:700;">{r['win_probability']:.1%} win chance</div>
-                  <div style="font-size:0.95rem; color:#9b59b6; font-weight:600;">{min(pod_pct, 1.0):.1%} podium chance</div>
-                  <div style="color:#888; font-size:0.82rem; margin-top:4px;">
+                <div style="border-top:4px solid {color}; background:{podium_bg[i]}; padding:16px 18px;
+                            border-radius:4px 4px 10px 10px; margin-bottom:8px; box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+                  <div style="font-size:1.35rem; font-weight:800;">{medals[i]} {r['driver']}</div>
+                  <div style="color:#555; font-size:0.85rem; margin-bottom:10px;">{r['constructor']}</div>
+
+                  <div style="display:flex; justify-content:space-between; font-size:0.78rem; color:#666;">
+                    <span>Win</span><span style="font-weight:700; color:#6C3DE8;">{win_pct:.1%}</span>
+                  </div>
+                  <div style="background:#EEEAF9; border-radius:6px; height:8px; margin:3px 0 10px 0; overflow:hidden;">
+                    <div style="width:{win_pct*100:.1f}%; background:#6C3DE8; height:100%; border-radius:6px;"></div>
+                  </div>
+
+                  <div style="display:flex; justify-content:space-between; font-size:0.78rem; color:#666;">
+                    <span>Podium</span><span style="font-weight:700; color:#9b59b6;">{pod_pct:.1%}</span>
+                  </div>
+                  <div style="background:#F3E9F9; border-radius:6px; height:8px; margin:3px 0 10px 0; overflow:hidden;">
+                    <div style="width:{pod_pct*100:.1f}%; background:#9b59b6; height:100%; border-radius:6px;"></div>
+                  </div>
+
+                  <div style="color:#888; font-size:0.8rem; margin-top:2px;">
                     Grid P{int(r['grid'])} &nbsp;·&nbsp;
                     Form <span style="color:{arrow_color}; font-weight:bold;">{arrow}</span>
                   </div>
-                  <div style="color:#aaa; font-size:0.78rem; margin-top:2px;">{circ_info}</div>
+                  <div style="color:#aaa; font-size:0.75rem; margin-top:2px;">{circ_info}</div>
                 </div>""", unsafe_allow_html=True)
 
-    st.markdown("---")
+    st.divider()
 
     # Dual bar chart: win + podium probability
     colors = [_team_color(c) for c in pred_df['constructor']]
@@ -789,15 +826,13 @@ def show_predictions(pred_df, event_name, has_quali, circuit_hist_multi=None):
         ))
     fig.update_layout(
         barmode='group',
-        title=dict(text="Win & Podium Probabilities", font_size=24, x=0.5),
+        title=dict(text="Win & Podium Probabilities"),
         xaxis_title="Driver",
         yaxis_title="Probability",
         yaxis_tickformat=".0%",
         height=480,
-        plot_bgcolor='white',
-        paper_bgcolor='white',
         legend=dict(orientation='h', y=1.05, x=0.5, xanchor='center'),
-        margin=dict(t=80, b=40),
+        margin=dict(t=90, b=40),
     )
     st.plotly_chart(fig, use_container_width=True)
 
@@ -959,16 +994,14 @@ def show_model_info(win_model, pod_model, win_auc, pod_auc, win_brier,
             x=feat_df['Importance'],
             y=feat_df['Feature'],
             orientation='h',
-            marker_color='#6C3DE8',
+            marker=dict(color=feat_df['Importance'], colorscale=[[0, '#C9B6F5'], [1, '#6C3DE8']]),
             hovertemplate="%{y}: %{x:.4f}<extra></extra>",
         ))
         fig.update_layout(
-            title=dict(text="Win Model — Feature Importance", font_size=20, x=0.5),
+            title=dict(text="Win Model — Feature Importance"),
             xaxis_title="Importance",
             height=max(320, len(feat_df) * 22),
-            plot_bgcolor='white',
-            paper_bgcolor='white',
-            margin=dict(t=50, b=30, l=10, r=10),
+            margin=dict(t=60, b=30, l=10, r=10),
         )
         st.plotly_chart(fig, use_container_width=True)
 
@@ -977,7 +1010,7 @@ def show_model_info(win_model, pod_model, win_auc, pod_auc, win_brier,
 **Features**: {len(feature_cols)} — grid position, championship points, form slope (5r), circuit history, DNF rate, teammate comparison, season progress, constructor rolling form
 **Training split**: 70% train / 15% calibrate / 15% test (chronological — no data leakage)
 **Class balancing**: `class_weight='balanced'` — corrects for ~5% win base rate
-**Output**: Calibrated win & podium probabilities per driver, each normalised to 100%
+**Output**: Win probabilities normalised to sum to 100% (one winner); podium probabilities normalised to sum to 300% (three podium spots) and floored at each driver's win probability
 
 > **AUC-ROC {win_auc:.3f}**: Separates winners from non-winners (0.5 = coin flip, 1.0 = perfect).
 > **Brier {win_brier:.4f}**: Probability calibration error — lower means tighter, more trustworthy probabilities.
@@ -990,10 +1023,26 @@ def show_model_info(win_model, pod_model, win_auc, pod_auc, win_brier,
 def main():
     nav_bar()
 
-    st.markdown("# 🔮 Race Winner Predictor")
-    st.caption(
-        "Calibrated gradient boosting trained on historical F1 data — "
-        "grid position, championship standings, form momentum, circuit history, and more."
+    st.markdown(
+        """
+        <div style="background:linear-gradient(135deg,#4A1FB8 0%,#6C3DE8 45%,#9B1FE8 100%);
+                    border-radius:12px; padding:24px 28px; margin-bottom:18px;
+                    border-left:6px solid #E8A020;">
+          <div style="display:flex; align-items:center; gap:14px;">
+            <span style="font-size:2.2rem;">🔮</span>
+            <div>
+              <div style="color:#FFFFFF; font-size:1.7rem; font-weight:800; letter-spacing:0.02em;">
+                Race Winner Predictor
+              </div>
+              <div style="color:rgba(255,255,255,0.82); font-size:0.92rem; margin-top:2px;">
+                Calibrated gradient boosting trained on historical F1 data — grid position,
+                championship standings, form momentum, circuit history, and more.
+              </div>
+            </div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
     with st.sidebar:
@@ -1040,7 +1089,7 @@ def main():
     start_year = max(2018, CURRENT_YEAR - train_seasons)
     end_year = CURRENT_YEAR - 1
     if start_year > end_year:
-        start_year = end_year = 2024
+        start_year = end_year = max(2018, CURRENT_YEAR - 1)
 
     with st.spinner(f"Training models on {start_year}–{end_year} data (cached after first load)..."):
         win_model, pod_model, feature_cols, win_auc, pod_auc, win_brier, n_races, n_wins = \
@@ -1097,12 +1146,14 @@ def main():
     X = _pred_X(pred_df, feature_cols)
 
     win_probs = win_model.predict_proba(X)[:, 1]
-    win_probs = win_probs / win_probs.sum()
+    win_probs = win_probs / win_probs.sum()  # exactly one winner per race
     pred_df['win_probability'] = win_probs
 
     if pod_model is not None:
         pod_probs = pod_model.predict_proba(X)[:, 1]
-        pod_probs = pod_probs / pod_probs.sum()
+        pod_probs = pod_probs / pod_probs.sum() * 3.0  # three podium spots per race, not one
+        pod_probs = np.clip(pod_probs, 0.0, 1.0)
+        pod_probs = np.maximum(pod_probs, win_probs)  # winning implies a podium finish
         pred_df['podium_probability'] = pod_probs
 
     tab1, tab2 = st.tabs(["🔮 Prediction", "📊 Model Info"])
