@@ -1,6 +1,13 @@
-# python -m streamlit run ./home.py
+# python -m streamlit run ./app.py
 
+import datetime
 import streamlit as st
+
+from graphs.theme import register_theme
+
+register_theme()
+
+_CURRENT_YEAR = datetime.date.today().year
 
 def set_streamlit_page_config_once():
     try:
@@ -20,6 +27,44 @@ _CSS = """
 section[data-testid="stMain"] > div:first-child {
     padding-top: 5rem !important;
 }
+
+/* Nav bar: turn the plain page_links into pill buttons with a hover lift */
+div[data-testid="stPageLink"] {
+    border-radius: 8px;
+    padding: 6px 4px;
+    transition: background-color 0.15s ease, transform 0.15s ease;
+}
+div[data-testid="stPageLink"]:hover {
+    background-color: #F0EBFC;
+    transform: translateY(-1px);
+}
+div[data-testid="stPageLink"] a {
+    text-decoration: none !important;
+}
+
+/* Headings pick up the brand purple for visual consistency */
+h2, h3 {
+    color: #1A1A2E;
+}
+
+/* Buttons: brand-colored with a subtle hover lift */
+.stButton > button, .stDownloadButton > button {
+    border-radius: 8px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.stButton > button:hover, .stDownloadButton > button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(108,61,232,0.25);
+}
+
+/* Tabs: bolder active indicator in brand purple */
+button[data-baseweb="tab"][aria-selected="true"] {
+    color: #6C3DE8 !important;
+    font-weight: 700 !important;
+}
+div[data-baseweb="tab-highlight"] {
+    background-color: #6C3DE8 !important;
+}
 </style>
 """
 
@@ -28,13 +73,18 @@ def nav_bar():
     st.markdown(_CSS, unsafe_allow_html=True)
     st.header("F1 CONSULTING", divider="rainbow")
     cols = st.columns(8)
-    cols[0].page_link("home.py",              label="**Home**",     icon="🏡")
+    try:
+        cols[0].page_link("app.py",           label="**Home**",     icon="🏡")
+    except KeyError:
+        # Streamlit's page registry key can mismatch the main script's path
+        # depending on how it was launched (e.g. "streamlit run .\app.py").
+        cols[0].markdown("🏡 **Home**")
     cols[1].page_link("pages/sessions.py",    label="**Sessions**", icon="🏎")
     cols[2].page_link("pages/teams.py",       label="**Teams**",    icon="🏗️")
     cols[3].page_link("pages/drivers.py",     label="**Drivers**",  icon="🙍")
-    cols[4].page_link("pages/seasons.py",     label="**Seasons**",  icon="📅")
-    cols[5].page_link("pages/circuits.py",    label="**Circuits**", icon="🏁")
-    cols[6].page_link("pages/predict.py",     label="**Predict**",  icon="🔮")
+    cols[4].page_link("pages/circuits.py",    label="**Circuits**", icon="🏁")
+    cols[5].page_link("pages/predict.py",     label="**Predict**",  icon="🔮")
+    cols[6].page_link("pages/ai_chat.py",     label="**AI**",       icon="🤖")
     cols[7].page_link("pages/contact.py",     label="**Contact**",  icon="📞")
 
 def credits():
@@ -53,7 +103,7 @@ def credits():
 # ── Hero ────────────────────────────────────────────────────────────────────
 # Uses the app's own purple (#6C3DE8) so the gradient always renders correctly
 # in light mode. All colours carry !important to beat Streamlit's textColor.
-_HERO_HTML = """
+_HERO_HTML = f"""
 <div style="
     background: linear-gradient(135deg, #4A1FB8 0%, #6C3DE8 45%, #9B1FE8 100%) !important;
     border-radius: 12px;
@@ -81,7 +131,7 @@ _HERO_HTML = """
       </h1>
       <p style="color:rgba(255,255,255,0.82) !important; font-size:1.05rem !important;
                 margin:6px 0 0 0 !important;">
-        Data-driven insights — from raw telemetry to championship standings
+        F1 stats, graphs and a chat that looks up the data for you
       </p>
     </div>
   </div>
@@ -98,7 +148,7 @@ _HERO_HTML = """
     <div style="background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25);
                 border-radius:8px; padding:10px 20px; text-align:center; min-width:80px;">
       <div style="color:#FFD700 !important; font-size:1.65rem !important; font-weight:800 !important;
-                  line-height:1.15;">2018–2026</div>
+                  line-height:1.15;">2018–{_CURRENT_YEAR}</div>
       <div style="color:rgba(255,255,255,0.80) !important; font-size:0.75rem !important;
                   margin-top:2px;">Season Data</div>
     </div>
@@ -123,19 +173,19 @@ _HERO_HTML = """
 # ── Feature card data: (name, icon, accent_color, page, short_desc) ─────────
 _FEATURES = [
     ("Sessions",  "🏎",  "#E8002D",  "pages/sessions.py",
-     "Telemetry, tyre strategies, race positions, engine clipping, launch analysis, weather & wind."),
+     "Telemetry, tyres, positions, weather — pick a session and dig in."),
     ("Teams",     "🏗️",  "#3671C6",  "pages/teams.py",
-     "Constructor standings with team colors, points progression chart, and car & logo previews."),
+     "Constructor standings, points over the season, car pics."),
     ("Drivers",   "🙍",  "#FF8000",  "pages/drivers.py",
-     "Driver standings with title-chance analysis, team colors, and per-race points heatmap."),
-    ("Seasons",   "📅",  "#229971",  "pages/seasons.py",
-     "Full season overview with race-by-race points heatmap across an entire championship year."),
+     "Driver standings, who can still win, points per race."),
     ("Circuits",  "🏁",  "#6C3DE8",  "pages/circuits.py",
-     "Season calendar, lap records, circuit facts, race winners, and historical win counts."),
+     "Calendar, lap records, past winners for every track."),
     ("Predict",   "🔮",  "#E8A020",  "pages/predict.py",
-     "ML-powered win probability predictions using grid position, standings, and recent form."),
+     "Win probability from grid position and current form."),
+    ("AI",        "🤖",  "#00A67E",  "pages/ai_chat.py",
+     "Ask about a session or standing, get a real answer. Needs a Gemini key."),
     ("Contact",   "📞",  "#64C4FF",  "pages/contact.py",
-     "Get in touch with the developer or explore the project on GitHub."),
+     "Reach the developer or check the repo."),
 ]
 
 def _card_header(icon, name, color, desc):
@@ -150,7 +200,7 @@ def _card_header(icon, name, color, desc):
     """
 
 def feature_cards():
-    st.markdown("### Explore the Dashboard")
+    st.markdown("### Pages")
     for i in range(0, len(_FEATURES), 3):
         cols = st.columns(3, gap="medium")
         for j, col in enumerate(cols):
@@ -198,19 +248,17 @@ _STACK_HTML = """
 
 def about_section():
     st.divider()
-    st.markdown("## About the Project")
+    st.markdown("## About")
     c1, c2 = st.columns([3, 1], gap="large")
 
     with c1:
         st.write(
-            "This dashboard harnesses **FastF1** telemetry, the **Ergast** historical API, and "
-            "**OpenF1** live data to deliver interactive Formula 1 analysis. Every chart is built "
-            "with Plotly — hover, zoom, and filter in the browser with no extra setup."
+            "F1 data from **FastF1**, **Ergast** and **OpenF1**. Charts are Plotly — "
+            "hover and zoom right in the browser."
         )
         st.write(
-            "Track lap-time deltas between teammates, study tyre degradation curves, review "
-            "championship permutations, or explore the season circuit-by-circuit. "
-            "Each page loads data on demand so heavy calculations never block your workflow."
+            "Compare teammates' lap times, check tyre wear, or browse the season "
+            "track by track. Each page only loads data when you open it."
         )
         st.markdown(_STACK_HTML, unsafe_allow_html=True)
         st.write("")
