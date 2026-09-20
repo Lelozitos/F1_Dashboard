@@ -3,18 +3,20 @@
 Mirrors the data-access patterns already used across pages/*.py in the main app
 (fastf1.get_session / fastf1.get_event_schedule, fastf1.ergast.Ergast, and the
 OpenF1 pit-stop endpoint), but returns compact JSON strings instead of
-rendering Streamlit widgets, since these are consumed by Claude as tool results.
-"""
-from __future__ import annotations
+rendering Streamlit widgets, since these are consumed by Gemini as tool results.
 
+No `from __future__ import annotations` here on purpose: google-genai's automatic
+function calling reads argument types straight off `inspect.signature(...).annotation`
+without resolving postponed (string) annotations, so a deferred annotation makes it
+crash with "isinstance() arg 2 must be a type, a tuple of types, or a union" on every
+call. Keep annotations as real runtime types, or the resolution differs on schema
+build vs. call time.
+"""
 import functools
 import json
-from typing import Optional
-
 import fastf1
 import pandas as pd
 import requests
-from anthropic import beta_tool
 from fastf1.ergast import Ergast
 
 _ergast = Ergast()
@@ -25,7 +27,7 @@ def _df_to_records(df: pd.DataFrame) -> list:
     return json.loads(df.to_json(orient="records", date_format="iso"))
 
 
-def _fmt_td(td) -> Optional[str]:
+def _fmt_td(td) -> str | None:
     """Format a pandas Timedelta as "M:SS.mmm" instead of "0 days 00:01:21.676000"."""
     if td is None or pd.isna(td):
         return None
@@ -49,7 +51,6 @@ def _load_session(year: int, event: str, session: str, laps: bool, weather: bool
     return data
 
 
-@beta_tool
 def get_event_schedule(year: int) -> str:
     """List the Grand Prix calendar for a season (rounds, events, countries, dates).
 
@@ -65,7 +66,6 @@ def get_event_schedule(year: int) -> str:
     return json.dumps(_df_to_records(schedule[cols]))
 
 
-@beta_tool
 def get_session_results(year: int, event: str, session: str) -> str:
     """Get the classification, fastest lap per driver, and weather summary for one session.
 
@@ -108,7 +108,6 @@ def get_session_results(year: int, event: str, session: str) -> str:
     })
 
 
-@beta_tool
 def get_driver_lap_times(year: int, event: str, session: str, driver: str) -> str:
     """Get every lap time for one driver in a session, including compound and pit laps.
 
@@ -133,7 +132,6 @@ def get_driver_lap_times(year: int, event: str, session: str, driver: str) -> st
     return json.dumps(_df_to_records(rows))
 
 
-@beta_tool
 def compare_fastest_laps(year: int, event: str, session: str, drivers: list[str]) -> str:
     """Compare fastest lap time, compound and sector times for several drivers in one session.
 
@@ -165,8 +163,7 @@ def compare_fastest_laps(year: int, event: str, session: str, drivers: list[str]
     return json.dumps(out)
 
 
-@beta_tool
-def get_driver_standings(year: int, round: Optional[int] = None) -> str:
+def get_driver_standings(year: int, round: int | None = None) -> str:
     """Get the drivers' championship standings for a season.
 
     Args:
@@ -185,8 +182,7 @@ def get_driver_standings(year: int, round: Optional[int] = None) -> str:
         return json.dumps({"error": str(e)})
 
 
-@beta_tool
-def get_constructor_standings(year: int, round: Optional[int] = None) -> str:
+def get_constructor_standings(year: int, round: int | None = None) -> str:
     """Get the constructors' championship standings for a season.
 
     Args:
@@ -204,7 +200,6 @@ def get_constructor_standings(year: int, round: Optional[int] = None) -> str:
         return json.dumps({"error": str(e)})
 
 
-@beta_tool
 def get_race_results(year: int, round: int) -> str:
     """Get full race classification for one round, merged with sprint points if that weekend ran a sprint.
 
@@ -233,7 +228,6 @@ def get_race_results(year: int, round: int) -> str:
         return json.dumps({"error": str(e)})
 
 
-@beta_tool
 def get_pit_stops(year: int, event: str, session: str) -> str:
     """Get pit stop data for a session from OpenF1 (community data source, occasionally incomplete/unreliable).
 
